@@ -1,0 +1,17 @@
+name = "verified"
+defaultTargets = ["Verified"]
+
+# The proofs about the Rust that ships, kept apart from the model proofs in
+# ../lean on purpose. This package requires the Aeneas Lean library, and that
+# library requires mathlib, which is large and fetched from the network. The
+# model proofs need nothing beyond the core library and stay a build anybody
+# can run offline; putting the two in one package would have cost them that.
+[[require]]
+name = "aeneas"
+git = "https://github.com/AeneasVerif/aeneas.git"
+subDir = "backends/lean"
+rev = "6e167c9b"
+
+[[lean_lib]]
+name = "Verified"
+roots = ["NoxVerified", "LimbProofs", "AmountProofs", "TransferProofs", "Base32Proofs", "FeeProofs"]
