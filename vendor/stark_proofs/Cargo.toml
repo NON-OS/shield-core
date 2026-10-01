@@ -1,0 +1,30 @@
+# NONOS Operating System
+# Copyright (C) 2026 NONOS Contributors
+#
+# Host-runnable proofs for the STARK field arithmetic. Includes the real
+# src/crypto/stark source and checks it against the field axioms.
+[package]
+name = "stark_proofs"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+nonos-stark = { path = "../nonos-stark" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
+[features]
+parallel = ["nonos-stark/parallel"]
+kat = ["nonos-stark/kat"]
+digest32 = ["nonos-stark/digest32"]
+radix8 = ["nonos-stark/radix8"]
+launch_v1 = ["nonos-stark/launch_v1"]
+v2 = ["nonos-stark/v2", "radix8", "digest32"]
+not_before = ["v2"]
+# The claim statement: the transfer plus the inputs' two limb sums, words 36 and 37.
+claim = ["v2"]

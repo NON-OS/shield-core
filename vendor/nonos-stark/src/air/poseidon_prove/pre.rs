@@ -1,0 +1,208 @@
+// NONOS Operating System (AGPL-3.0-or-later)
+
+//! The preprocessed Poseidon prover, sequencing the protocol whose passes live in the sibling
+//! modules. It commits the trace under the wide root, draws the composition coefficients,
+//! commits the composition, draws the out-of-domain point, absorbs the frame and the periodic
+//! claims, widens the DEEP draw to one quotient per periodic column, builds and commits the
+//! DEEP polynomial, runs FRI, and opens each query with its sidecar row. A prover here is a
+//! transcript order over passes that are byte-for-byte the plain path's, plus the baked
+//! periodic root that turns the schedule from a proven region into a committed constant.
+
+use super::super::super::field::Fp2;
+use super::super::super::fri_poseidon_ext::fri_prove_poseidon_ext_seeded;
+use super::super::super::poseidon_merkle::{pack_pair_ext, PoseidonMerkleTree};
+use super::super::super::poseidon_transcript::PoseidonTranscript;
+use super::super::composition::num_coeffs;
+use super::super::draw_ood_poseidon::draw_ood_point_poseidon;
+use super::super::periodic_poseidon::periodic_tree_poseidon;
+use super::super::poseidon::{Poseidon, RATE};
+use super::super::progress::{Phase, Progress};
+use super::super::prove_ext::{comp_at_z, ood_frame, over_domain, periodic_at_z, Domain};
+use super::super::prove_ext_pre::pre_deep_over_domain;
+use super::super::spec::AirExt;
+use super::super::wire::types_poseidon_ext::StarkProofExtP;
+use super::super::wire::types_poseidon_pre::{PeriodicOpeningP, StarkProofExtPPre};
+use super::{queries, sidecar, trace};
+use crate::field::Fp;
+use alloc::vec::Vec;
+
+/// Prove `trace` with the periodic sidecar, bound to `publics`. The verifier
+/// holds the matching baked periodic root; the periodic tree here comes
+/// through the registration helper, so the two are one object by
+/// construction. The transcript mirrors the plain poseidon prover until the
+/// frame, then absorbs the periodic claims, and DEEP carries one quotient per
+/// periodic column against them.
+#[allow(clippy::too_many_arguments)]
+pub fn stark_prove_poseidon_pre_pub<A: AirExt>(
+    air: &A,
+    witness: &[Fp],
+    n_queries: usize,
+    grind_bits: u32,
+    extra_blowup_bits: u32,
+    h: &Poseidon,
+    publics: &[Fp],
+    blind: &[Vec<Fp>],
+) -> Option<StarkProofExtPPre> {
+    stark_prove_poseidon_pre_pub_watched(
+        air,
+        witness,
+        n_queries,
+        grind_bits,
+        extra_blowup_bits,
+        h,
+        publics,
+        blind,
+        None,
+    )
+}
+
+/// The client's proof, with somebody watching.
+///
+/// This is the entry point a wallet proves a transfer through, so it is the one
+/// whose phases a person is waiting on. The watch carries the phase now
+/// running, each phase's duration as it completes, and the caller's request to
+/// stop; the caller polls it and the prover never calls back, because a
+/// callback out of a worker thread into a phone's UI layer is a contract about
+/// threads and lifetimes, and a poll is an atomic load.
+///
+/// The phases are [`Progress::PHASE_NAMES`], the same six the settlement prover
+/// reports, because the two provers differ in their hash and their blinding
+/// rather than in their shape.
+///
+/// Returns `None` only when the caller cancelled, so a cancelled proof cannot
+/// reach an encoder as if it were finished.
+#[allow(clippy::too_many_arguments)]
+pub fn stark_prove_poseidon_pre_pub_watched<A: AirExt>(
+    air: &A,
+    witness: &[Fp],
+    n_queries: usize,
+    grind_bits: u32,
+    extra_blowup_bits: u32,
+    h: &Poseidon,
+    publics: &[Fp],
+    blind: &[Vec<Fp>],
+    watch: Option<&Progress>,
+) -> Option<StarkProofExtPPre> {
+    let d = Domain::of(air, extra_blowup_bits);
+    let mut phase = Phase::start(watch);
+
+    let mut transcript = PoseidonTranscript::new(h.clone());
+    for &p in publics {
+        transcript.absorb(p);
+    }
+    // Zero-knowledge blinding of the trace, one polynomial per column, empty for
+    // the plain non-hiding proof. It flows through the commitment and out via the
+    // frame, so the whole preprocessed proof hides when a blind is given. This is
+    // the deployed transfer's prover: passing a fresh per-proof blind here is what
+    // makes a real transfer's proof, not only its commitments, reveal nothing.
+    let tr = trace::commit_wide(h, &d, witness, blind);
+    transcript.absorb_digest(&tr.tree.root());
+    phase.done("trace commitment");
+    if phase.cancelled() {
+        return None;
+    }
+
+    let coeffs: Vec<Fp2> = transcript.challenge_powers(num_coeffs(air));
+
+    let periodic_cols = air.periodic_columns();
+    let (pc, p_tree) = periodic_tree_poseidon(air, extra_blowup_bits, h);
+    phase.done("periodic commitment");
+    if phase.cancelled() {
+        return None;
+    }
+
+    let comp_d = over_domain(air, &d, &tr.coeffs, &pc, &coeffs);
+    let comp_half = comp_d.len() / 2;
+    let comp_leaves: Vec<[Fp; RATE]> =
+        crate::par::map_index(comp_half, |i| pack_pair_ext(comp_d[i], comp_d[i + comp_half]));
+    let comp_tree = PoseidonMerkleTree::commit(h, &comp_leaves);
+    transcript.absorb_digest(&comp_tree.root());
+    phase.done("composition");
+    if phase.cancelled() {
+        return None;
+    }
+
+    let z = draw_ood_point_poseidon(&mut transcript, d.shift, d.n, d.t);
+    let frame = ood_frame(&tr.coeffs, &d, z);
+    for value in &frame {
+        transcript.absorb(value.c0);
+        transcript.absorb(value.c1);
+    }
+    let periodic_z = periodic_at_z(&d, &periodic_cols, z);
+    for value in &periodic_z {
+        transcript.absorb(value.c0);
+        transcript.absorb(value.c1);
+    }
+    let comp_z = comp_at_z(air, &d, &frame, &periodic_z, z, &coeffs);
+    phase.done("out of domain");
+    if phase.cancelled() {
+        return None;
+    }
+
+    let deep_coeffs: Vec<Fp2> =
+        transcript.challenge_powers(d.width * d.window + 1 + periodic_cols.len());
+    let deep_d = pre_deep_over_domain(
+        &d,
+        &tr.coeffs,
+        &pc,
+        &comp_d,
+        &frame,
+        &periodic_z,
+        comp_z,
+        z,
+        &deep_coeffs,
+    );
+
+    /*
+     * The seed, then FRI: it draws the positions after its nonce, and every
+     * consistency query below opens at them.
+     */
+    let s = transcript.challenge_fp2();
+    let (fri, positions) = fri_prove_poseidon_ext_seeded(
+        &deep_d, d.shift, d.fri_log_blowup,
+        n_queries,
+        grind_bits,
+        h,
+        Some([s.c0, s.c1]),
+    );
+    phase.done("deep and fri");
+    if phase.cancelled() {
+        return None;
+    }
+
+    /*
+     * The DEEP codeword is FRI layer zero, so this tree must be the tree the
+     * FRI built: fold pairs under one leaf, half as many leaves. Committing it
+     * per value here and per pair there would give two roots for one codeword,
+     * and the consistency openings would authenticate under a root the
+     * transcript never absorbed.
+     */
+    let deep_half = deep_d.len() / 2;
+    let deep_leaves: Vec<[Fp; RATE]> =
+        crate::par::map_index(deep_half, |i| pack_pair_ext(deep_d[i], deep_d[i + deep_half]));
+    let deep_tree = PoseidonMerkleTree::commit(h, &deep_leaves);
+
+    let mut qs = Vec::with_capacity(n_queries);
+    let mut openings: Vec<PeriodicOpeningP> = Vec::with_capacity(n_queries);
+    for &p in &positions {
+        qs.push(queries::open(
+            h, &d, &tr, &comp_d, &comp_tree, &deep_d, &deep_tree, p,
+        ));
+        openings.push(sidecar::open(h, &d, &pc, &p_tree, p));
+    }
+
+    phase.done("query openings");
+    phase.finish();
+
+    Some(StarkProofExtPPre {
+        proof: StarkProofExtP {
+            trace_root: tr.tree.root(),
+            comp_root: comp_tree.root(),
+            ood_frame: frame,
+            fri,
+            queries: qs,
+        },
+        periodic_z,
+        openings,
+    })
+}

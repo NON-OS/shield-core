@@ -1,0 +1,35 @@
+[package]
+name = "nonos-stark"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0"
+description = "Transparent post-quantum STARK primitives shared by the kernel and the bootloader"
+
+[lib]
+name = "nonos_stark"
+
+[dependencies]
+rayon = { version = "1", optional = true }
+blake3 = { version = "1.0", default-features = false }
+
+# Phones: BLAKE3's C and assembly need a cross C compiler, and nothing the
+# prover runs uses BLAKE3. The portable Rust form builds everywhere.
+[target.'cfg(any(target_os = "ios", target_os = "android"))'.dependencies]
+blake3 = { version = "1.0", default-features = false, features = ["pure"] }
+
+[features]
+parallel = ["dep:rayon"]
+# Records every transcript operation for a known-answer vector. Tooling only.
+kat = []
+# Keep all 32 bytes of every Merkle digest (v2). A different build, roots and
+# parameter identity: see `merkle::DIGEST_BYTES`.
+digest32 = []
+# Fold eight values a layer (v2). A different build: see `fri::FRI_FOLD_LOG`.
+radix8 = []
+# The live launch circuit without the checkpoint rule, for its pinned vectors
+# only. Never for a new image.
+launch_v1 = []
+# The v2 transcript (docs/17): exact draws, vector absorbs, the DEEP grind and
+# independent DEEP coefficients, the query shape, radix 8, 32-byte digests and
+# the periodic overlay. A different build, parameter identity and wire format.
+v2 = ["radix8", "digest32"]

@@ -1,0 +1,26 @@
+// NONOS Operating System (AGPL-3.0-or-later)
+//! The grand-product binding families, one per file.
+
+mod bind;
+mod collapse;
+mod deep;
+mod fold;
+mod index;
+mod pack;
+mod periodic;
+mod roots;
+mod single;
+mod statement;
+mod strip;
+mod uf;
+
+pub use bind::Bind;
+pub use collapse::{collapse, wiring_classes};
+pub use deep::deep;
+pub use fold::fold;
+pub use index::index;
+pub use periodic::periodic;
+pub use roots::{absorbed, roots};
+pub use single::{single, single_group, SinglePermutation, BLOCK};
+pub use statement::statement;
+pub use strip::strip;
