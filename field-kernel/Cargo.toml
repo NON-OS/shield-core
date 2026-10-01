@@ -1,0 +1,23 @@
+[package]
+name = "nox_field_kernel"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "A measured aarch64 kernel for the prover's field multiply, against the portable one"
+publish = false
+
+[lib]
+name = "nox_field_kernel"
+
+[dependencies]
+
+[dev-dependencies]
+# The prover's own field, so the differential test compares against what ships
+# rather than against a copy of it in this crate.
+nonos-stark = { workspace = true }
+
+[features]
+default = []
+# Use the hand written kernel where one exists for the target. Off by default:
+# the portable path is what ships until a measurement says otherwise.
+kernel = []
