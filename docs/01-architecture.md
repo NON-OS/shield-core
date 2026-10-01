@@ -209,7 +209,7 @@ private relay.
 | No panic or overflow in the fee offer, gas limit, RLP, NOX fee split, revert decoding, balance check | Kani | the `*_kani.rs` files in `core/src/evm` |
 | Nonces, reviews, notes across two devices, take back | TLA+ | `spec/` |
 | The production prover proves the four pinned 37-limb vectors byte for byte, and the production verifier accepts them | `core/tests/prod_vectors.rs`, and `verifyBatch` read with `eth_call` | by hand, 1 October |
-| The launch verifier accepts proofs from the launch prover | the verification kit | `ci/verify-kit`, CI job `launch-proof` |
+| The launch verifier accepts proofs from the launch prover | the verification kit | `ci/verify-kit`, CI job `launch-proof` until the production pool |
 
 ## Where the numbers come from
 

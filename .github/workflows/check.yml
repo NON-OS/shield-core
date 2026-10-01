@@ -10,9 +10,10 @@ on:
   # Every core commit carries [skip ci], so a run is asked for by hand.
   workflow_dispatch:
 
+# Warnings are denied in our crates only, by clippy. A vendored crate keeps upstream's code, warnings
+# and all, and is never edited here.
 env:
   CARGO_TERM_COLOR: never
-  RUSTFLAGS: -D warnings
   # No debug info in CI builds. Every test binary links the whole core with the
   # embedded Tor client, and with debug info two dozen of them fill the runner's
   # disk until the linker dies of it. Tests assert; they are not stepped through.
@@ -41,12 +42,13 @@ jobs:
         run: cargo fmt -p nox_shield_core -p nox_verified --check
 
       - name: Lints
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy -p nox_shield_core -p nox_verified --all-targets --all-features -- -D warnings
 
       # All features, because the parser sweep sits behind the one that exposes
       # the parsers to a fuzzer. Without it that sweep is a file nothing runs.
+      # The vendored crates are tested where they come from.
       - name: Tests
-        run: cargo test --workspace --all-features
+        run: cargo test -p nox_shield_core -p nox_verified --all-features
 
   # The model checker, over every harness that finishes. The reply reader harness, which feeds
   # every string up to 8 bytes, does not finish and is left out. The `account` fuzz target covers
@@ -96,10 +98,6 @@ jobs:
           build: true
           test: false
 
-  # One real transfer through the frozen launch prover, in release, on every
-  # push: it must verify, be 112,956 bytes and carry the launch parameter id.
-  # This is the check that the wallet's request, seed and keys are the ones the
-  # pool's circuit proves, and not a rehearsal or test circuit.
   # The TLA+ models of the wallet's concurrency: nonces and reviews on the
   # public account, notes across two devices, and the hole take-back closes.
   tla:
@@ -112,46 +110,3 @@ jobs:
           java-version: "17"
       - name: Every model holds, and the frozen one still fails
         run: spec/check.sh
-
-  launch-proof:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Room to link
-        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      # The per-proof zero-knowledge check, with the queries placed by hand:
-      # it must hold in general position, refuse the collision class and pass
-      # the pinned proof.
-      - name: The rank check tells a sound proof from the collision class
-        env:
-          CARGO_PROFILE_RELEASE_DEBUG: "0"
-        run: cargo test --release -p stark_proofs zk_rank_test
-
-      - name: Prove a transfer at the launch point
-        env:
-          CARGO_PROFILE_RELEASE_DEBUG: "0"
-          NOX_PROOF_OUT: ${{ runner.temp }}/proof
-        run: cargo test --release -p nox_shield_core --test proof -- --ignored a_transfer_proves --nocapture
-
-      # The release gate: the live launch verifier on Sepolia must accept the
-      # proof this build's prover just made. The kit checks its own files and
-      # proves it can tell a route 2 proof from an older one before it is
-      # trusted with ours. A local verify cannot catch a proof the chain
-      # refuses; only this can.
-      - uses: foundry-rs/foundry-toolchain@v1
-
-      - name: The kit tells a good proof from a refused one
-        env:
-          RPC: https://ethereum-sepolia-rpc.publicnode.com
-        run: ci/verify-kit/selftest.sh
-
-      - name: The live verifier accepts this build's proof
-        env:
-          RPC: https://ethereum-sepolia-rpc.publicnode.com
-        run: |
-          ci/verify-kit/verify.sh "${{ runner.temp }}/proof/export/launch-proof.bin" \
-            "${{ runner.temp }}/proof/export/launch-proof.publics.json"

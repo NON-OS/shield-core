@@ -20,7 +20,7 @@ from crates.io and nothing else.
 | Lean | 4.31.0 | `lean/lean-toolchain`, `lean-verified/lean-toolchain` |
 | Charon and Aeneas | Aeneas commit `45061fa`, and the Charon it exports | `flake.nix`, `flake.lock` |
 | nixpkgs | `nixos-25.05` | `flake.nix`, `flake.lock` |
-| TLA+ tools | 1.8.0, SHA-256 `32d64fbbc464559fc7192341b27b885fa4eb6b92d1648d2b49fb9cdcb7aacf81` | `spec/check.sh` checks the hash before running |
+| TLA+ tools | 1.7.4, SHA-256 `936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88` | `spec/check.sh` checks the hash before running |
 | The verification kit | tarball SHA-256 `c63e192304bee55880bdced6ea13169c8d89c9e8192aa46562a587660ee2cbc4` | `ci/verify-kit.source`, and every file in `ci/verify-kit/SHA256SUMS` |
 | The Android NDK | 27.0.12077973, r27, with `cargo-ndk` 4.1.2 | `.github/workflows/reproduce.yml`, and the flake of the Android app |
 | Kani | 0.68.0 | `.github/workflows/check.yml` |

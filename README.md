@@ -206,11 +206,11 @@ Only what has run. Each line names its evidence. What is not checked is in [docs
 | A spend anchors only to a root the association registry holds | `core/src/wallet/registry.rs`, which the wallet checks before it proves |
 | A spend waits for 20 more notes and 6 hours after its newest input, unless the owner types EARLY | `core/src/wallet/spend/ripe_test.rs` |
 | Each withdrawal is offered an unused address of the same words | `core/tests/withdraw_to.rs` |
-| On the launch pool, the live verifier accepts proofs from the launch prover | the `launch-proof` job, from commit `c211a24` on: a 112,956-byte proof file, then `ci/verify-kit/verify.sh`, which prints `accepted` |
+| On the launch pool, the live verifier accepts proofs from the launch prover | the `launch-proof` job, from commit `c211a24` until the move to the production pool: a 112,956-byte proof file, then `ci/verify-kit/verify.sh`, which prints `accepted` |
 | On the launch pool, the proof the wallet writes is the proof a settlement carries | the file is a 40-byte `NOXP` header and the proof. The kit, like the relayer, re-encodes the proof into the verifier one-call layout, which is the 113,216-byte `proof` argument of `settleBatch` in settlement `0xbed088f0…d04f` |
 | On the launch pool, a private transfer settled and reached a phone | settlement [`0x1efa772d…8fa8`](https://sepolia.etherscan.io/tx/0x1efa772d78a8ba014b51a1d28c46020b0df446427af3c4db9928559d683d8fa8), block 11,775,200, 7,337,580 gas, leaf 167 |
 | The settlement reveals no sender, receiver or amount | Figure 1, and a search of the 120,164 bytes it put on chain: 116,708 of calldata, 2,752 of event data and 704 of topics |
-| The per-proof zero-knowledge check holds in general position and refuses the collision class | `zk_rank_test` in `vendor/stark_proofs`, run by the `launch-proof` job |
+| The per-proof zero-knowledge check holds in general position and refuses the collision class | `zk_rank_test` in `stark_proofs`, run in the prover's own repository, [NON-OS/STARKs](https://github.com/NON-OS/STARKs) |
 | The 0x account matches the standard derivation of the same words | `core/src/evm/account_test.rs`: the BIP-39 test phrase gives `0x9858EfFD232B4033E47d90003D41EC34EcaEda94` |
 | EIP-1559 signing is exact | `core/src/evm/tx_test.rs`: two signed transactions, one per network, equal to `cast mktx` byte for byte |
 | Swap and approval calls are exact | `core/src/evm/swap/calldata_test.rs`: three router calls and one approval equal to `cast calldata` byte for byte |
@@ -284,7 +284,7 @@ public chain state over Tor and sign nothing.
 | Rust | 1.91.1 | `rust-toolchain.toml` |
 | Lean | 4.31.0 | `lean/lean-toolchain` |
 | Charon and Aeneas | Aeneas `45061fa`, with its Charon | `flake.nix`, `flake.lock` |
-| TLA+ tools | 1.8.0, SHA-256 `32d64fbb…acf81` | `spec/check.sh` |
+| TLA+ tools | 1.7.4, SHA-256 `936a2620…0e88` | `spec/check.sh` |
 | Foundry | the current release | the verification kit |
 | Kani | 0.68.0 | the `kani` job of `.github/workflows/check.yml` |
 | Android NDK | 27.0.12077973, which Google ships as r27, with `cargo-ndk` 4.1.2 | `.github/workflows/reproduce.yml`, and the flake of the Android app |

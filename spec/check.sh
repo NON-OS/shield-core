@@ -5,8 +5,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 JAR="${TLA_TOOLS:-tla2tools.jar}"
-[ -f "$JAR" ] || curl -sSL -o "$JAR" https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
-echo "32d64fbbc464559fc7192341b27b885fa4eb6b92d1648d2b49fb9cdcb7aacf81  $JAR" | shasum -a 256 -c -
+[ -f "$JAR" ] || curl -sSL -o "$JAR" https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar
+echo "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88  $JAR" | shasum -a 256 -c -
 tlc() { java -XX:+UseParallelGC -cp "$JAR" tlc2.TLC -workers auto -config "$1.cfg" "$2.tla" 2>&1; }
 for model in Account Notes; do
     out=$(tlc "$model" "$model") || true
@@ -16,7 +16,9 @@ for model in Account Notes; do
 done
 # TLC exits non-zero when it finds the violation, which is the point here.
 frozen=$(tlc Frozen Notes) || true
-if echo "$frozen" | grep -q "NothingFrozen was violated"; then
+# Frozen.cfg checks NothingFrozen alone, so a temporal violation can only be that one. TLC 1.7
+# says "Temporal properties were violated", and later builds name the property.
+if echo "$frozen" | grep -qE "NothingFrozen was violated|Temporal properties were violated"; then
     echo "Frozen: still finds the note a lost hand-off would freeze without take-back"
 else
     echo "Frozen: the model no longer finds the hole take-back closes" >&2
