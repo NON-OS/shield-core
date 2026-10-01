@@ -1,0 +1,8 @@
+name = "shield"
+defaultTargets = ["Shield"]
+
+# No mathlib. These proofs are about the wallet's own arithmetic and state
+# machines, they need nothing beyond the core library, and a build that fetches
+# nothing is a build anybody can run offline.
+[[lean_lib]]
+name = "Shield"
