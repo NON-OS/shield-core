@@ -1,0 +1,12 @@
+# The same accepted advisories as deny.toml, with the same reasons, so the two
+# databases agree. Anything new still fails the build.
+[advisories]
+ignore = [
+    # rsa, the Marvin timing attack: it recovers a private key from decryption
+    # timings. Tor uses RSA only to verify relay signatures with public keys;
+    # no RSA private key exists in this wallet.
+    "RUSTSEC-2023-0071",
+    # paste is unmaintained: a compile time macro inside Arti, with no runtime
+    # code and no fixed replacement upstream yet.
+    "RUSTSEC-2024-0436",
+]

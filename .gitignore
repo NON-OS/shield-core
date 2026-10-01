@@ -1,0 +1,26 @@
+/target/
+# Nix writes result, and result-1, result-2 and so on for a build with several
+# outputs.
+result
+result-*
+# The links to the crates this builds against are a property of a machine, not
+# of the repository. scripts/link-deps.sh makes them.
+# Working notes that are not about this code.
+/local/
+# What the fuzzers write: the inputs they kept, the crashes they found and
+# their build tree. A corpus is a machine's working set, not a source file, and
+# a crash that matters becomes a test rather than a committed artefact.
+/fuzz/corpus/
+/fuzz/artifacts/
+/fuzz/coverage/
+/fuzz/target/
+# Lean's build output.
+/lean/.lake/
+/lean-verified/.lake/
+# No secret ever lands here, so the file that usually carries one cannot.
+.env
+.env.*
+.DS_Store
+._*
+/fuzz-*.log
+spec/tla2tools.jar

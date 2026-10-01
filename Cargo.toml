@@ -1,0 +1,73 @@
+[workspace]
+members = ["core", "field-kernel", "verified"]
+# The linked crates are dependencies, not members. Without this they would be
+# pulled into the workspace by sitting under its root, and then a workspace
+# wide test or lint would run over another repository's code and fail on its
+# warnings rather than this one's.
+exclude = [
+    "vendor/nonos-stark",
+    "vendor/stark_proofs",
+    "vendor/nox_prover",
+    "vendor/nonos_hd",
+    "vendor/nonos_seal",
+    "fuzz",
+]
+resolver = "2"
+
+# The prover, the shield stack and the custody crates live in their own
+# repositories and are reached through links in vendor/, which
+# scripts/link-deps.sh makes. Declaring them once here means a different
+# checkout is one script run, and it keeps every path on anybody's machine out
+# of a published file.
+[workspace.dependencies]
+nonos-stark = { path = "vendor/nonos-stark", features = ["parallel"] }
+stark_proofs = { path = "vendor/stark_proofs" }
+nox_prover = { path = "vendor/nox_prover", features = ["parallel", "not_before"] }
+rayon = "=1.12.0"
+nonos_hd = { path = "vendor/nonos_hd" }
+nonos_seal = { path = "vendor/nonos_seal" }
+nox_verified = { path = "verified" }
+blake3 = { version = "=1.8.7", default-features = false }
+getrandom = "=0.2.17"
+x25519-dalek = { version = "=2.0.1", default-features = false, features = ["static_secrets", "zeroize"] }
+x-wing = { version = "=0.1.0", default-features = false, features = ["zeroize"] }
+chacha20poly1305 = { version = "=0.11.0", default-features = false }
+sha3 = { version = "=0.12.0", default-features = false }
+k256 = { version = "=0.13.4", default-features = false, features = ["arithmetic", "ecdsa"] }
+arti-client = { version = "=0.46.0", default-features = false, features = ["tokio", "rustls", "compression", "onion-service-client", "vanguards", "static-sqlite", "memquota"] }
+tor-rtcompat = { version = "=0.46.0", default-features = false, features = ["tokio", "rustls"] }
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "io-util", "time"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+webpki-roots = { version = "1" }
+zeroize = { version = "=1.8.2", default-features = false, features = ["derive"] }
+uniffi = "=0.29.5"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+debug = false
+overflow-checks = true
+
+[profile.release.package."*"]
+opt-level = 3
+
+# Release code with symbols, for a profiler. The shipped profile strips them,
+# which turns every frame in a sample into a hex address, so profiling gets its
+# own profile rather than a temporary edit to the one that ships.
+[profile.profiling]
+inherits = "release"
+debug = 1
+strip = "none"
+
+# The library the binding generator reads, which is not the library that ships.
+# The generator finds the interface by walking the static symbol table for the
+# symbols the uniffi macros export, and the shipped profile strips that table,
+# so on a release library it finds nothing and writes nothing. Building the
+# same code once more with the table kept leaves the shipped artifact exactly
+# as it was, which matters because its hash is published.
+[profile.bindings]
+inherits = "release"
+strip = "none"

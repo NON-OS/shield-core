@@ -1,0 +1,82 @@
+[graph]
+targets = [
+    { triple = "aarch64-linux-android" },
+    { triple = "aarch64-apple-ios" },
+]
+
+[advisories]
+version = 2
+yanked = "deny"
+# Each ignore names the advisory, the path it arrives by, and why it cannot be
+# reached from this wallet. Re-read them when the crate that brings one in moves.
+ignore = [
+    # The Marvin attack: timing of RSA private-key decryption leaks the key.
+    # rsa arrives through Arti's onion-service crypto (tor-hscrypto, tor-key-forge,
+    # ssh-key). A Tor client uses RSA only to verify relay signatures with public
+    # keys; this wallet never creates, loads or decrypts with an RSA private key,
+    # so there is no oracle to time. No fixed rsa release exists upstream.
+    { id = "RUSTSEC-2023-0071", reason = "no RSA private-key operation in a Tor client; verification only" },
+    # paste is a compile-time proc-macro under fs-mistrust (pwd-grp). Unmaintained,
+    # and it runs only in the compiler: nothing of it is in the shipped binary.
+    { id = "RUSTSEC-2024-0436", reason = "compile-time proc-macro only, not in the binary" },
+]
+
+[licenses]
+version = 2
+# This wallet is AGPL. Everything it links has to be a licence that can be
+# distributed inside an AGPL binary. MPL-2.0 is here for one reason: uniffi,
+# which is how one core serves two shells, and its file level copyleft is
+# satisfied by shipping the crate's own source unchanged. The permissive ones
+# below arrive with the embedded Tor client, its TLS and the note cipher: ISC
+# (ring and its kin), Zlib, BSD-2-Clause, the Unlicense, and CDLA-Permissive-2.0,
+# which is the Mozilla root store's data licence in webpki-roots. Each places no
+# condition an AGPL binary cannot meet.
+allow = [
+    "AGPL-3.0",
+    "AGPL-3.0-or-later",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+
+[bans]
+multiple-versions = "warn"
+# A registry dependency without a version would be refused outright, but this
+# has to stay a warning rather than an error, and the reason is worth writing
+# down: the only wildcards in this graph are the path dependencies the prover's
+# own crates have on each other. cargo deny can only exempt those for crates
+# that declare publish = false, and those manifests do not, so denying here
+# would make this check permanently red for something no edit in this
+# repository can fix. What pins those crates is the commit each link points at,
+# recorded in the build record.
+wildcards = "warn"
+allow-wildcard-paths = true
+# A wallet has no business linking a socket library it did not choose, a
+# telemetry client, or a device identifier reader. The core opens two kinds of
+# connection, both from core/src/net: the SOCKS5 proxy in net::socks5, and the
+# wallet's own Tor client in net::tor. That client is Arti, and Arti runs on
+# tokio, so tokio is chosen, and allowed only as Arti's runtime and net::tor's:
+# any other crate that pulls it in fails here. HTTP stacks stay banned; the
+# wallet speaks the one request it needs itself, over TLS it chose.
+deny = [
+    { crate = "reqwest" },
+    { crate = "hyper" },
+    { crate = "tokio", wrappers = ["nox_shield_core", "tor-rtcompat", "tor-proto", "tor-async-utils", "tokio-util", "async_executors"] },
+    { crate = "openssl" },
+    { crate = "native-tls" },
+    { crate = "sentry" },
+    { crate = "android_system_properties" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
