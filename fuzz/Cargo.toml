@@ -1,0 +1,91 @@
+# The fuzzers, in their own workspace.
+#
+# Kept out of the crate graph the wallet ships: this manifest is its own
+# workspace root, so nothing here appears in the resolved dependency set that
+# scripts/check-dependencies.sh pins, and a fuzzing dependency can never
+# reach a phone.
+[package]
+name = "nox-shield-fuzz"
+version = "0.0.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "=0.4.13"
+nox_shield_core = { path = "../core", features = ["fuzzing"] }
+
+[[bin]]
+name = "note"
+path = "fuzz_targets/note.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "store_frame"
+path = "fuzz_targets/store_frame.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "store_row"
+path = "fuzz_targets/store_row.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "address"
+path = "fuzz_targets/address.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+
+[[bin]]
+name = "rpc"
+path = "fuzz_targets/rpc.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "account"
+path = "fuzz_targets/account.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lander"
+path = "fuzz_targets/lander.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "policy"
+path = "fuzz_targets/policy.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "typed"
+path = "fuzz_targets/typed.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "disk"
+path = "fuzz_targets/disk.rs"
+test = false
+doc = false
+bench = false
