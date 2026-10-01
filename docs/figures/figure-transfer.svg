@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1030" width="1600" height="1030">
+<defs><marker id="h" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M1,1.5 L11,6 L1,10.5" fill="none" stroke="#111111" stroke-width="1.2"/></marker></defs>
+<rect width="1600" height="1030" fill="#ffffff"/>
+<text x="60" y="56" font-family='"Libertinus Serif", Georgia, serif' font-size="21" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111"><tspan font-weight="600">Figure 1.</tspan> A private transfer on the NOX Shield launch pool, from deposit to receipt</text>
+<text x="60" y="84" font-family='"Libertinus Serif", Georgia, serif' font-size="14" font-style="italic" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#4a4a4a">Sepolia, 25 September 2026. Solid arrows are Ethereum transactions, dashed arrows travel off chain. The shaded columns are devices, and nothing in them is published.</text>
+<rect x="60" y="112" width="410" height="690" fill="#f4f3ef"/>
+<rect x="1130" y="112" width="410" height="690" fill="#f4f3ef"/>
+<text x="265.0" y="140" font-family='"Libertinus Serif", Georgia, serif' font-size="14" font-weight="normal" letter-spacing="3" text-anchor="middle" fill="#111111">SENDER</text>
+<text x="265.0" y="160" font-family='"Libertinus Serif", Georgia, serif' font-size="13.5" font-style="italic" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#4a4a4a">private</text>
+<line x1="76" y1="172" x2="454" y2="172" stroke="#8a8a8a" stroke-width="0.8"/>
+<text x="800.0" y="140" font-family='"Libertinus Serif", Georgia, serif' font-size="14" font-weight="normal" letter-spacing="3" text-anchor="middle" fill="#111111">ETHEREUM</text>
+<text x="800.0" y="160" font-family='"Libertinus Serif", Georgia, serif' font-size="13.5" font-style="italic" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#4a4a4a">public</text>
+<line x1="536" y1="172" x2="1064" y2="172" stroke="#8a8a8a" stroke-width="0.8"/>
+<text x="1335.0" y="140" font-family='"Libertinus Serif", Georgia, serif' font-size="14" font-weight="normal" letter-spacing="3" text-anchor="middle" fill="#111111">RECEIVER</text>
+<text x="1335.0" y="160" font-family='"Libertinus Serif", Georgia, serif' font-size="13.5" font-style="italic" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#4a4a4a">private</text>
+<line x1="1146" y1="172" x2="1524" y2="172" stroke="#8a8a8a" stroke-width="0.8"/>
+<circle cx="36" cy="207" r="11" fill="#ffffff" stroke="#111111" stroke-width="0.9"/>
+<text x="36" y="212" font-family='"Libertinus Serif", Georgia, serif' font-size="13" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#111111">1</text>
+<line x1="1150" y1="202" x2="456" y2="202" stroke="#111111" stroke-width="1.1" stroke-dasharray="6 5" marker-end="url(#h)"/>
+<text x="800.0" y="194" font-family='"Libertinus Serif", Georgia, serif' font-size="14" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#111111">address nox1…: spend key <tspan font-style='italic'>pk</tspan>, X-Wing key <tspan font-style='italic'>ek</tspan></text>
+<text x="1335.0" y="208" font-family='"Libertinus Serif", Georgia, serif' font-size="14" font-style="italic" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#4a4a4a">keys <tspan font-style='italic'>sk</tspan>, <tspan font-style='italic'>dk</tspan> never leave the phone</text>
+<circle cx="36" cy="262" r="11" fill="#ffffff" stroke="#111111" stroke-width="0.9"/>
+<text x="36" y="267" font-family='"Libertinus Serif", Georgia, serif' font-size="13" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#111111">2</text>
+<text x="78" y="250" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">two notes, each worth 498,750 NOX</text>
+<text x="78" y="271" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111"><tspan font-style='italic'>C</tspan> = Poseidon(<tspan font-style='italic'>v</tspan>, NOX, owner(<tspan font-style='italic'>pk</tspan><tspan font-size='11' dy='3'>S</tspan><tspan dy='-3'>, </tspan><tspan font-style='italic'>r</tspan>))</text>
+<line x1="456" y1="280" x2="538" y2="280" stroke="#111111" stroke-width="1.1" marker-end="url(#h)"/>
+<rect x="540" y="238" width="520" height="84" fill="#ffffff" stroke="#111111" stroke-width="0.9"/>
+<text x="556" y="262" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">absorb × 2 from 0xEa1c…cDB2, 500,000 NOX each</text>
+<text x="556" y="283" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">leaves 165 and 166</text>
+<text x="556" y="304" font-family='Menlo, "SF Mono", monospace' font-size="12.5" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#4a4a4a">tx 0x38aea6a1…85af, 0xf85b1353…f7d9</text>
+<text x="1044" y="262" font-family='"Libertinus Serif", Georgia, serif' font-size="13" font-style="italic" font-weight="normal" letter-spacing="0" text-anchor="end" fill="#4a4a4a">public</text>
+<circle cx="36" cy="372" r="11" fill="#ffffff" stroke="#111111" stroke-width="0.9"/>
+<text x="36" y="377" font-family='"Libertinus Serif", Georgia, serif' font-size="13" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#111111">3</text>
+<rect x="540" y="346" width="520" height="56" fill="#ffffff" stroke="#111111" stroke-width="0.9"/>
+<text x="556" y="370" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">root 0x3a45c392…0142 over 167 notes</text>
+<text x="556" y="391" font-family='Menlo, "SF Mono", monospace' font-size="12.5" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#4a4a4a">tx 0x7f2324cb…4e25</text>
+<line x1="538" y1="388" x2="456" y2="388" stroke="#111111" stroke-width="1.1" stroke-dasharray="6 5" marker-end="url(#h)"/>
+<text x="450" y="380" font-family='"Libertinus Serif", Georgia, serif' font-size="13.5" font-style="italic" font-weight="normal" letter-spacing="0" text-anchor="end" fill="#4a4a4a">root and paths, read</text>
+<circle cx="36" cy="452" r="11" fill="#ffffff" stroke="#111111" stroke-width="0.9"/>
+<text x="36" y="457" font-family='"Libertinus Serif", Georgia, serif' font-size="13" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#111111">4</text>
+<text x="78" y="440" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111"><tspan font-style='italic'>π</tspan> ← STARK over Goldilocks, no trusted setup:</text>
+<text x="78" y="463" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">two notes under the root, inputs = outputs + fee</text>
+<text x="78" y="486" font-family='"Libertinus Serif", Georgia, serif' font-size="14" font-style="italic" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#4a4a4a">112,956 bytes, zero knowledge, rank check holds</text>
+<text x="78" y="509" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111"><tspan font-style='italic'>c</tspan><tspan font-size='11' dy='3'>0</tspan><tspan dy='-3'> ← </tspan><tspan font-style='italic'>Enc</tspan><tspan font-size='11' dy='3' font-style='italic'>ek</tspan><tspan dy='-3'>(500,000 NOX, </tspan><tspan font-style='italic'>r′</tspan>)</text>
+<text x="78" y="532" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111"><tspan font-style='italic'>c</tspan><tspan font-size='11' dy='3'>1</tspan><tspan dy='-3'> ← change of 497,490 NOX, to the sender</tspan></text>
+<circle cx="36" cy="626" r="11" fill="#ffffff" stroke="#111111" stroke-width="0.9"/>
+<text x="36" y="631" font-family='"Libertinus Serif", Georgia, serif' font-size="13" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#111111">5</text>
+<text x="78" y="610" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">hand-off to relayer 0xc973…031c:</text>
+<text x="78" y="631" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111"><tspan font-style='italic'>π</tspan>, 36 public limbs, <tspan font-style='italic'>c</tspan><tspan font-size='11' dy='3'>0</tspan><tspan dy='-3'>, </tspan><tspan font-style='italic'>c</tspan><tspan font-size='11' dy='3'>1</tspan></text>
+<line x1="456" y1="640" x2="538" y2="640" stroke="#111111" stroke-width="1.1" marker-end="url(#h)"/>
+<rect x="540" y="592" width="520" height="142" fill="#ffffff" stroke="#111111" stroke-width="0.9"/>
+<text x="556" y="616" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">settleBatch, sent by the relayer</text>
+<text x="556" y="639" font-family='Menlo, "SF Mono", monospace' font-size="12.5" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#4a4a4a">tx 0x1efa772d…8fa8, block 11,775,200, 7,337,580 gas</text>
+<text x="556" y="662" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">verifier: <tspan font-style='italic'>π</tspan> checked in full, accepted</text>
+<text x="556" y="685" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">nullifiers <tspan font-style='italic'>nf</tspan><tspan font-size='11' dy='3'>1</tspan><tspan dy='-3'>, </tspan><tspan font-style='italic'>nf</tspan><tspan font-size='11' dy='3'>2</tspan><tspan dy='-3'> spent; leaves 167 and 168 appended</tspan></text>
+<text x="556" y="708" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">10 NOX credited to the relayer</text>
+<text x="1044" y="616" font-family='"Libertinus Serif", Georgia, serif' font-size="13" font-style="italic" font-weight="normal" letter-spacing="0" text-anchor="end" fill="#4a4a4a">public</text>
+<circle cx="36" cy="686" r="11" fill="#ffffff" stroke="#111111" stroke-width="0.9"/>
+<text x="36" y="691" font-family='"Libertinus Serif", Georgia, serif' font-size="13" font-weight="normal" letter-spacing="0" text-anchor="middle" fill="#111111">6</text>
+<line x1="1060" y1="681" x2="1144" y2="681" stroke="#111111" stroke-width="1.1" stroke-dasharray="6 5" marker-end="url(#h)"/>
+<text x="950.0" y="764" font-family='"Libertinus Serif", Georgia, serif' font-size="13" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111"></text>
+<text x="1060" y="762" font-family='"Libertinus Serif", Georgia, serif' font-size="13" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111"></text>
+<text x="1160" y="686" font-family='"Libertinus Serif", Georgia, serif' font-size="14.5" font-style="italic" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#4a4a4a">event OutputNote, leaf 167: <tspan font-style='italic'>c</tspan><tspan font-size='11' dy='3'>0</tspan><tspan dy='-3'>, 1,186 bytes</tspan></text>
+<text x="1160" y="710" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111"><tspan font-style='italic'>Dec</tspan><tspan font-size='11' dy='3' font-style='italic'>dk</tspan><tspan dy='-3'>(</tspan><tspan font-style='italic'>c</tspan><tspan font-size='11' dy='3'>0</tspan><tspan dy='-3'>) = (500,000 NOX, </tspan><tspan font-style='italic'>r′</tspan>)</text>
+<text x="1160" y="734" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">commitment recomputed = leaf 167</text>
+<text x="1160" y="758" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="600" letter-spacing="0" text-anchor="start" fill="#111111">balance: 500,000 NOX, shielded</text>
+<line x1="60" y1="832" x2="1540" y2="832" stroke="#111111" stroke-width="0.9"/>
+<text x="60" y="864" font-family='"Libertinus Serif", Georgia, serif' font-size="16" font-weight="600" letter-spacing="0" text-anchor="start" fill="#111111">Visible on chain</text>
+<text x="60" y="892" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">the depositor, its two deposits of 500,000 NOX, and the root</text>
+<text x="60" y="916" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">the relayer, two nullifiers, two commitments, two ciphertexts</text>
+<text x="60" y="940" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">the flat relay fee of 10 NOX</text>
+<text x="810" y="864" font-family='"Libertinus Serif", Georgia, serif' font-size="16" font-weight="600" letter-spacing="0" text-anchor="start" fill="#111111">Absent from the public record</text>
+<text x="810" y="892" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">the sender of the transfer, its receiver, and the amount paid</text>
+<text x="810" y="916" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">which two notes were spent</text>
+<text x="810" y="940" font-family='"Libertinus Serif", Georgia, serif' font-size="15" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#111111">A search of all 120,164 bytes of the settlement finds none of them.</text>
+<line x1="60" y1="972" x2="1540" y2="972" stroke="#111111" stroke-width="0.9"/>
+<text x="60" y="998" font-family='Menlo, "SF Mono", monospace' font-size="12" font-weight="normal" letter-spacing="0" text-anchor="start" fill="#4a4a4a">Pool 0x8e377752C8890E23A1E9F40eBbD41183Fc6949e2 · settlement sepolia.etherscan.io/tx/0x1efa772d78a8ba014b51a1d28c46020b0df446427af3c4db9928559d683d8fa8</text>
+</svg>
