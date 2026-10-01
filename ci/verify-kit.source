@@ -1,0 +1,3 @@
+verify-kit.tar.gz, as published with the launch pool, unpacked here unmodified.
+SHA-256 of the tarball: c63e192304bee55880bdced6ea13169c8d89c9e8192aa46562a587660ee2cbc4
+Every file inside is pinned in verify-kit/SHA256SUMS, which selftest.sh checks first.
