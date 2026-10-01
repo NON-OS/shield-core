@@ -1,0 +1,43 @@
+# Two builds of one core commit, each from clean in its own directory, compared byte for byte, for
+# every library the apps ship: the Android libraries and the iOS archives. A difference fails.
+name: reproduce
+
+# Four release builds is the most expensive run here, so it is asked for by hand and on tags.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+env:
+  CARGO_TERM_COLOR: never
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Room to build
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+
+      # The NDK the Android app pins in its flake, 27.0.12077973, which Google ships as r27.
+      - name: NDK r27
+        run: |
+          curl -sSfL https://dl.google.com/android/repository/android-ndk-r27-linux.zip -o "$RUNNER_TEMP/ndk.zip"
+          unzip -q "$RUNNER_TEMP/ndk.zip" -d "$RUNNER_TEMP"
+          grep -q 27.0.12077973 "$RUNNER_TEMP/android-ndk-r27/source.properties"
+          echo "ANDROID_NDK_HOME=$RUNNER_TEMP/android-ndk-r27" >> "$GITHUB_ENV"
+
+      - name: cargo ndk
+        run: cargo install cargo-ndk --locked --version 4.1.2
+
+      - name: Two builds, the same bytes
+        run: scripts/reproduce.sh android
+
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Two builds, the same bytes
+        run: scripts/reproduce.sh ios

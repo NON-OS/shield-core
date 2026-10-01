@@ -1,0 +1,39 @@
+# The privacy claims, as checks that fail rather than sentences that age.
+#
+# Each job here corresponds to a line in docs/05-privacy-checklist.md. A claim without a job
+# in this file is a claim nobody is holding.
+name: privacy
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The dependency set is an allowlist, recomputed not maintained
+        run: scripts/check-dependencies.sh
+
+  no-logging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The core writes to no log, no terminal and no debug macro
+        run: scripts/check-no-logging.sh
+
+  no-network-elsewhere:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Only the net module opens a socket
+        run: scripts/check-one-destination.sh
+
+  no-identifiers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Nothing generates, stores or sends a unique identifier
+        run: scripts/check-no-identifiers.sh

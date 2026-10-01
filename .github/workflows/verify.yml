@@ -1,0 +1,113 @@
+# The proofs about the Rust that ships, not about a model of it.
+#
+# lean/ holds two kinds of proof. The theorems in Shield/ are about hand
+# written models of the wallet's state machines, and the existing check
+# workflow builds those. The theorems in lean-verified/ are about verified/src,
+# translated by Charon and Aeneas, and this workflow is what keeps that
+# translation honest: it regenerates the Lean from the Rust and fails if the
+# committed file has drifted, then checks the proofs against it.
+#
+# Both tools come from flake.nix: one Aeneas commit, and the Charon that
+# commit was built against, so the two cannot drift apart. A mismatch between
+# them shows up as a translation that quietly omits a function rather than as
+# an error, which would leave a proof about an empty namespace passing.
+name: verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  extraction:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Nix builds the pinned Rust toolchain for Charon from source, which
+      # outgrows a runner's free disk with the preinstalled SDKs still on it.
+      - name: Room to build
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost && df -h /
+
+      # Nix, because flake.lock is the one place the tool versions live: the
+      # Aeneas commit, and through it the Charon it was built against. A
+      # builder on a laptop and this runner install the same bytes.
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # The translation as a pure build, and the check that the committed
+      # file is what it produced. A drift here is fixed by the command the
+      # error message names.
+      - name: The committed translation is the one the Rust produces
+        run: nix build --print-build-logs .#checks.x86_64-linux.extraction
+
+      # When the Rust changed, the translation it now produces, built by the
+      # same pinned tools, for a maintainer to read and commit. Nothing takes
+      # it automatically: the committed file changes only by a person's hand.
+      - name: Build the translation the Rust now produces
+        if: failure()
+        run: nix build --print-build-logs .#extraction && cp result/NoxVerified.lean NoxVerified.lean
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: NoxVerified-regenerated
+          path: NoxVerified.lean
+          retention-days: 7
+
+      # The proofs. This fetches mathlib, which the Aeneas Lean library needs
+      # and which the model proofs in lean/ deliberately do not, which is why
+      # the two are separate packages and the check workflow builds the other.
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: lean-verified
+          build: true
+          test: false
+
+      # A proof that rests on an axiom nobody meant to add is not a proof.
+      # This theorem rests on Lean's three and nothing else, and that is the
+      # gate: a `sorry` shows up as sorryAx, a SAT call shows up as a
+      # `_native` axiom, and either one fails here rather than passing as a
+      # proof that looks finished.
+      - name: The proofs rest on Lean's three axioms and nothing else
+        working-directory: lean-verified
+        run: |
+          cat > /tmp/axioms.lean <<'LEAN'
+          import LimbProofs
+          import AmountProofs
+          import TransferProofs
+          import Base32Proofs
+          import FeeProofs
+          #print axioms NoxVerified.the_halves_rebuild_the_value
+          #print axioms NoxVerified.split_fraction_is_below_the_scale
+          #print axioms NoxVerified.split_then_combine_is_the_identity
+          #print axioms NoxVerified.combine_refuses_a_carrying_fraction
+          #print axioms NoxVerified.the_transfer_balances
+          #print axioms NoxVerified.a_covering_pair_is_never_refused
+          #print axioms NoxVerified.an_uncovered_pair_is_refused
+          #print axioms NoxVerified.a_glyph_reads_back_as_its_symbol
+          #print axioms NoxVerified.a_symbol_writes_the_glyph_that_read_it
+          #print axioms NoxVerified.five_bytes_survive_the_round_trip
+          #print axioms NoxVerified.five_bytes_have_one_spelling
+          #print axioms NoxVerified.three_bytes_survive_the_round_trip
+          #print axioms NoxVerified.a_set_padding_bit_is_refused
+          #print axioms NoxVerified.three_bytes_have_one_spelling
+          #print axioms NoxVerified.the_token_fee_adds_back
+          #print axioms NoxVerified.a_fee_of_the_whole_is_refused
+          #print axioms NoxVerified.the_offer_is_held_to_the_ceiling
+          #print axioms NoxVerified.an_offer_past_the_ceiling_is_refused
+          #print axioms NoxVerified.the_nonce_is_the_larger
+          #print axioms NoxVerified.covers_is_the_true_sum
+          LEAN
+          lake env lean /tmp/axioms.lean | tee /tmp/axioms.out
+          expected='[propext, Classical.choice, Quot.sound]'
+          while IFS= read -r line; do
+            axioms="${line#*depends on axioms: }"
+            if [ "$axioms" != "$expected" ]; then
+              echo "a theorem rests on axioms it should not: $line" >&2
+              exit 1
+            fi
+          done < /tmp/axioms.out
+          test "$(wc -l < /tmp/axioms.out)" -eq 20

@@ -1,0 +1,157 @@
+# Every claim in this repository is true today. This is what keeps it true.
+#
+# The crates the wallet builds against are vendored as pinned source in
+# vendor/, so the runner builds exactly the code the tests ran against.
+name: check
+
+on:
+  push:
+  pull_request:
+  # Every core commit carries [skip ci], so a run is asked for by hand.
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: never
+  RUSTFLAGS: -D warnings
+  # No debug info in CI builds. Every test binary links the whole core with the
+  # embedded Tor client, and with debug info two dozen of them fill the runner's
+  # disk until the linker dies of it. Tests assert; they are not stepped through.
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The runner ships toolchains this job never touches; their space is
+      # what the linker needs.
+      - name: Room to link
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      # Our crates only. The vendored ones keep upstream's formatting, and a
+      # change made in the copy is one the next update silently discards.
+      - name: Format
+        run: cargo fmt -p nox_shield_core -p nox_verified --check
+
+      - name: Lints
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      # All features, because the parser sweep sits behind the one that exposes
+      # the parsers to a fuzzer. Without it that sweep is a file nothing runs.
+      - name: Tests
+        run: cargo test --workspace --all-features
+
+  # The model checker, over every harness that finishes. The reply reader harness, which feeds
+  # every string up to 8 bytes, does not finish and is left out. The `account` fuzz target covers
+  # that reader instead.
+  kani:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Room to build
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+
+      - name: Kani 0.68.0
+        run: cargo install --locked kani-verifier --version 0.68.0 && cargo kani setup
+
+      - name: Every harness that finishes is verified
+        run: |
+          cargo kani -p nox_shield_core --lib \
+            --harness a_gas_limit_is_exact_for_ether_and_never_below_the_estimate \
+            --harness an_offer_is_always_one_the_chain_accepts_and_never_overpays \
+            --harness any_revert_data_reads_as_a_sentence_without_panicking \
+            --harness what_arrives_and_the_fee_add_up_to_what_was_sent \
+            --harness every_header_announces_its_own_length \
+            --harness every_integer_is_minimal_and_decodes_back \
+            --harness a_send_that_passes_the_balance_check_is_always_covered
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny,cargo-audit
+      - name: Licences, bans, sources, advisories
+        run: cargo deny check
+      - name: Advisories again, from the other database
+        run: cargo audit
+
+  lean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: lean
+          build: true
+          test: false
+
+  # One real transfer through the frozen launch prover, in release, on every
+  # push: it must verify, be 112,956 bytes and carry the launch parameter id.
+  # This is the check that the wallet's request, seed and keys are the ones the
+  # pool's circuit proves, and not a rehearsal or test circuit.
+  # The TLA+ models of the wallet's concurrency: nonces and reviews on the
+  # public account, notes across two devices, and the hole take-back closes.
+  tla:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Every model holds, and the frozen one still fails
+        run: spec/check.sh
+
+  launch-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Room to link
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # The per-proof zero-knowledge check, with the queries placed by hand:
+      # it must hold in general position, refuse the collision class and pass
+      # the pinned proof.
+      - name: The rank check tells a sound proof from the collision class
+        env:
+          CARGO_PROFILE_RELEASE_DEBUG: "0"
+        run: cargo test --release -p stark_proofs zk_rank_test
+
+      - name: Prove a transfer at the launch point
+        env:
+          CARGO_PROFILE_RELEASE_DEBUG: "0"
+          NOX_PROOF_OUT: ${{ runner.temp }}/proof
+        run: cargo test --release -p nox_shield_core --test proof -- --ignored a_transfer_proves --nocapture
+
+      # The release gate: the live launch verifier on Sepolia must accept the
+      # proof this build's prover just made. The kit checks its own files and
+      # proves it can tell a route 2 proof from an older one before it is
+      # trusted with ours. A local verify cannot catch a proof the chain
+      # refuses; only this can.
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - name: The kit tells a good proof from a refused one
+        env:
+          RPC: https://ethereum-sepolia-rpc.publicnode.com
+        run: ci/verify-kit/selftest.sh
+
+      - name: The live verifier accepts this build's proof
+        env:
+          RPC: https://ethereum-sepolia-rpc.publicnode.com
+        run: |
+          ci/verify-kit/verify.sh "${{ runner.temp }}/proof/export/launch-proof.bin" \
+            "${{ runner.temp }}/proof/export/launch-proof.publics.json"
