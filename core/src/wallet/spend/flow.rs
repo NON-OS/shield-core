@@ -1,0 +1,65 @@
+//! One spend, end to end on this device: anchor to the pool's newest root,
+//! pick the notes, check the pool's rules, prove and rank check, seal the two
+//! outputs, and write the hand-off a relayer settles. The inputs are marked
+//! pending before the call returns, so they cannot be spent twice while the
+//! relayer is at work.
+
+use super::{build::request, Destination, Order};
+use crate::discovery::note_commitments;
+use crate::error::{ProveError, WalletError};
+use crate::net::pool::ACTIVE;
+use crate::notes::{commitment, NoteStatus};
+use crate::prover::launch::prove::prove_spend;
+use crate::prover::{pool_hasher, Cancel};
+use crate::store::Row;
+use crate::wallet::anchor::anchor_where;
+use crate::wallet::handoff::{seal_outputs, write_handoff};
+use crate::wallet::scan_history::view;
+use crate::wallet::sync_chain::History;
+use crate::wallet::Session;
+use std::path::{Path, PathBuf};
+
+/// What a spend left behind: the file for the relayer, and what it cost.
+pub struct SpendOutcome {
+    pub handoff: Vec<PathBuf>,
+    pub weakened: Vec<&'static str>,
+}
+
+pub fn spend(
+    session: &mut Session,
+    history: &History,
+    order: &Order,
+    dir: &Path,
+    cancel: &Cancel,
+) -> Result<SpendOutcome, WalletError> {
+    let committed = note_commitments(&view(&history.committed));
+    let allowed = crate::wallet::registry::allows(&history.registered);
+    let anchor = anchor_where(&committed, &view(&history.roots), &allowed)
+        .map_err(|_| ProveError::RootNotPublished)?;
+    let need = order.amount.checked_add(order.fee).ok_or(WalletError::Amount)?;
+    let held = session.state().held().into_iter();
+    let held: Vec<_> = held.filter(|n| crate::store::pool::on_pool(&committed, n)).collect();
+    let ripe = super::ripe::ripe(&history.committed, history.head);
+    let picked = super::pick::pick_ripe(&held, &anchor, order, need, &ripe)?;
+    let own = session.account().address().spend_pk;
+    let req = request(&ACTIVE, &anchor, &picked, order, own)?;
+    let cache = crate::prover::launch::cache::read(dir);
+    let secret = zeroize::Zeroizing::new(session.account().sk().map(|f| f.value()));
+    let [a, b] = &picked.notes;
+    let proof = prove_spend(&req, &secret, [a, b], cache.as_deref(), cancel)?;
+    if let Some(built) = &proof.new_cache {
+        crate::prover::launch::cache::keep(dir, built);
+    }
+    let own_ek = session.account().receive().encapsulation_key();
+    let payee_ek = match &order.to {
+        Destination::Wallet { sealed_to, .. } => **sealed_to,
+        Destination::Withdraw { .. } => own_ek,
+    };
+    let sealed = seal_outputs(&proof, &payee_ek, &own_ek)?;
+    let handoff = write_handoff(&dir.join("export").join("handoff"), &proof, &sealed)?;
+    for note in picked.notes.iter().filter(|n| n.value > 0) {
+        let cm = commitment(&pool_hasher(), &note.note()).map(|f| f.value());
+        session.record(Row::Status { cm, status: NoteStatus::Pending })?;
+    }
+    Ok(SpendOutcome { handoff, weakened: proof.weakened })
+}

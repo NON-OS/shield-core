@@ -1,0 +1,7 @@
+[bindings.kotlin]
+package_name = "systems.nonos.shield.core"
+cdylib_name = "nox_shield_core"
+
+[bindings.swift]
+module_name = "NoxShieldCore"
+cdylib_name = "nox_shield_core"

@@ -1,0 +1,69 @@
+[package]
+name = "nox_shield_core"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "The NOX Shield wallet core: prover, note store, custody and transport"
+publish = false
+
+[lib]
+name = "nox_shield_core"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi_bindgen.rs"
+required-features = ["bindgen"]
+
+[dependencies]
+nonos-stark = { workspace = true }
+stark_proofs = { workspace = true }
+nox_prover = { workspace = true }
+rayon = { workspace = true }
+nox_verified = { workspace = true }
+nonos_hd = { workspace = true }
+nonos_seal = { workspace = true }
+blake3 = { workspace = true }
+getrandom = { workspace = true }
+x25519-dalek = { workspace = true }
+x-wing = { workspace = true }
+chacha20poly1305 = { workspace = true }
+sha3 = { workspace = true }
+k256 = { workspace = true }
+arti-client = { workspace = true }
+tor-rtcompat = { workspace = true }
+tokio = { workspace = true }
+rustls = { workspace = true }
+webpki-roots = { workspace = true }
+zeroize = { workspace = true }
+uniffi = { workspace = true }
+
+# A grep for unwrap is not a proof that nothing panics. These are the lints
+# that are: an index, a slice range and an arithmetic overflow are the three
+# ways money code panics in release, and every one of them has to be written as
+# a checked operation or a total one.
+[lints.clippy]
+arithmetic_side_effects = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+integer_division = "deny"
+modulo_arithmetic = "deny"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+# The model checker's harnesses are compiled only under `cargo kani`.
+unexpected_cfgs = { level = "deny", check-cfg = ["cfg(kani)"] }
+
+[features]
+default = []
+# The binding generator is a development tool. Gated so the shipped library
+# does not carry the generator's dependency tree.
+bindgen = ["uniffi/cli"]
+# The parsers, reachable by a fuzzer. Off by default, so the symbols are not in
+# a shipped library at all.
+fuzzing = []
+# Exporting a view key. Off in a release until the vectors are reproduced independently and it is
+# confirmed that nk with spend_pk proves nothing without sk.
+view-key-export = []
