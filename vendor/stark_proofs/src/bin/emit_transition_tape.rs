@@ -23,6 +23,7 @@
 //!     emit_transition_tape <out.json> <oracle.json> [<oracle.json> ...]
 //!     emit_transition_tape <out.json> direct=<proof.publics.json> <oracle.json> [...]
 //!     emit_transition_tape <out.json> attest=<proof.publics.json> <oracle.json> [...]
+//!     emit_transition_tape <out.json> activity=<proof.publics.json> <oracle.json> [...]
 //!
 //! With `direct=` the circuit is the join-split proved for the chain with no
 //! outer, rebuilt from those words, and its challenges are beta's and gamma's
@@ -120,9 +121,10 @@ fn main() {
     }
     let direct = a.iter().find_map(|s| s.strip_prefix("direct="));
     let attest = a.iter().find_map(|s| s.strip_prefix("attest="));
+    let activity = a.iter().find_map(|s| s.strip_prefix("activity="));
     let oracles: Vec<&String> = a[1..]
         .iter()
-        .filter(|s| !s.starts_with("direct=") && !s.starts_with("attest="))
+        .filter(|s| !s.starts_with("direct=") && !s.starts_with("attest=") && !s.starts_with("activity="))
         .collect();
     if oracles.is_empty() {
         die("no oracle");
@@ -130,7 +132,13 @@ fn main() {
     let h = hasher();
     // The drawn pair is an input, so the tape reads beta and gamma rather
     // than baking them: two in `Fp`, or four components in `Fp2`.
-    let recorded = match (attest, direct) {
+    let recorded = match (attest.or(activity), direct) {
+        (Some(p), _) if activity.is_some() => {
+            let words: Vec<Fp> = Json(&read_text(p)).u64s("publics").into_iter().map(Fp::from_u64).collect();
+            let shape = stark_proofs::activity::shape(&words)
+                .unwrap_or_else(|| die("the publics are not an activity statement's fourteen words"));
+            Circuit::of(shape, 4)
+        }
         (Some(p), _) => {
             let words: Vec<Fp> = Json(&read_text(p)).u64s("publics").into_iter().map(Fp::from_u64).collect();
             let shape = stark_proofs::attest::shape(&words)

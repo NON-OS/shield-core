@@ -48,12 +48,12 @@ impl Transcript {
     }
 
     /// Absorb a vector of field elements. On the v1 transcript this is one
-    /// absorb per element, exactly as the loops it replaces. On v2 it is one
+    /// absorb per element, exactly as the loops it replaces. On the format 7 transcript it is one
     /// Keccak over the whole vector, each element as eight little-endian
     /// bytes; every vector's length is fixed by the parameters, so the length
     /// is not absorbed (docs/17).
     pub fn absorb_fp_vec(&mut self, values: &[Fp]) {
-        #[cfg(feature = "v2")]
+        #[cfg(feature = "fri8")]
         {
             let mut data = Vec::with_capacity(8 * values.len());
             for v in values {
@@ -61,16 +61,16 @@ impl Transcript {
             }
             self.mix(0x02, &data);
         }
-        #[cfg(not(feature = "v2"))]
+        #[cfg(not(feature = "fri8"))]
         for v in values {
             self.absorb_fp(*v);
         }
     }
 
     /// Absorb a vector of extension elements, each as c0 then c1: on v1 two
-    /// absorbs per element, on v2 one Keccak over the whole vector.
+    /// absorbs per element, on the format 7 transcript one Keccak over the whole vector.
     pub fn absorb_fp2_vec(&mut self, values: &[Fp2]) {
-        #[cfg(feature = "v2")]
+        #[cfg(feature = "fri8")]
         {
             let mut data = Vec::with_capacity(16 * values.len());
             for v in values {
@@ -79,7 +79,7 @@ impl Transcript {
             }
             self.mix(0x02, &data);
         }
-        #[cfg(not(feature = "v2"))]
+        #[cfg(not(feature = "fri8"))]
         for v in values {
             self.absorb_fp(v.c0);
             self.absorb_fp(v.c1);
@@ -128,11 +128,11 @@ impl Transcript {
     /// Draw a base-field challenge. Retained for query index derivation; fold and
     /// DEEP challenges use `challenge_fp2` for soundness (see below).
     pub fn challenge_fp(&mut self) -> Fp {
-        #[cfg(feature = "v2")]
+        #[cfg(feature = "fri8")]
         {
             self.stream_fp(0x03, 1)[0]
         }
-        #[cfg(not(feature = "v2"))]
+        #[cfg(not(feature = "fri8"))]
         {
             Fp::from_u64(self.squeeze_u64(0x03))
         }
@@ -150,12 +150,12 @@ impl Transcript {
     /// `2^-64`, while `Fp2` (~`2^128`) reaches `2^-128`. The bound is proved in
     /// `Nonos.Stark.Soundness.the_soundness_error_is_below_the_degree`.
     pub fn challenge_fp2(&mut self) -> Fp2 {
-        // v2: one exact stream under 0x06, c0 then c1 (docs/17); 0x07 unused.
-        #[cfg(feature = "v2")]
+        // One exact stream under 0x06, c0 then c1 (docs/17); 0x07 unused.
+        #[cfg(feature = "fri8")]
         {
             self.stream_fp2(0x06, 1)[0]
         }
-        #[cfg(not(feature = "v2"))]
+        #[cfg(not(feature = "fri8"))]
         {
             let c0 = Fp::from_u64(self.squeeze_u64(0x06));
             let c1 = Fp::from_u64(self.squeeze_u64(0x07));
@@ -400,9 +400,9 @@ mod tests {
         assert_eq!(got, [5, p - 1]);
     }
 
-    /// On v2 an extension challenge is c0 then c1 from one 0x06 stream, and
+    /// On the format 7 transcript an extension challenge is c0 then c1 from one 0x06 stream, and
     /// the lanes left over are dropped.
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     #[test]
     fn an_extension_challenge_is_one_stream() {
         let mut t = Transcript::new(b"stream");
@@ -428,7 +428,7 @@ mod tests {
     /// The copy-constraint pair a two round proof draws after its region root,
     /// from a fixed state, on both paths. The on-chain verifier replays the same
     /// squeezes, so these are the known answers it is held to bit for bit.
-    #[cfg(not(feature = "v2"))]
+    #[cfg(not(feature = "fri8"))]
     #[test]
     fn the_copy_constraint_draws_match_the_chains() {
         let head = "038ce53ed5cfbb7bfae60af73ecd860637b608a8f6584c933cde31245df8104b";

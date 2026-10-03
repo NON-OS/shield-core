@@ -201,9 +201,9 @@ fn the_layout_identity_moves_with_every_offset() {
 /// If either of these moves, the geometry moved. That is either intended, in
 /// which case update the value and the generated Solidity in the same commit,
 /// or it is the bug this test exists to catch.
-// The pins are the v1 launch identities; the v2 ones are in spec/v2/MANIFEST.md
-// and checked by the v2 emitter.
-#[cfg(not(feature = "v2"))]
+// The pins are the v1 launch identities; the format 7 ones are in spec/transfer/MANIFEST.md
+// and checked by the transfer emitter.
+#[cfg(not(feature = "fri8"))]
 #[test]
 fn both_identities_are_pinned_for_the_shipped_point() {
     let p = shipped();

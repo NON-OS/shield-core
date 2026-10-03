@@ -27,6 +27,7 @@ mod horner;
 mod index_draw;
 mod index_point;
 mod index_scalar;
+mod activity_count;
 mod live_gate;
 mod merkle_membership;
 mod multi_membership;

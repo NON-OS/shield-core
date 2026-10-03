@@ -3,8 +3,7 @@
 `nox_prover::prove_with(request, seed, entropy, &options)` proves one spend: two notes in and two
 notes out. This is every field it reads, with its type and unit, and what it returns.
 `spec/wallet-vectors/` holds pinned examples: a request, a seed file and fixed entropy, with the proof
-and public words they produce. The Rust prover and the Zig client (`ocean/src/wallet_vectors_test.zig`)
-agree on all of them.
+and public words they produce. A wallet build must reproduce each of them byte for byte.
 
 Numbers are JSON integers. A digest is a 256-bit word, written `0x` followed by 64 hex digits:
 limb 0 is the lowest 64 bits, as the pool stores it (`host::pack_u256`, `try_unpack_digest`). An
@@ -43,7 +42,7 @@ checked against the trees.
 | ETH | 0 | 1 wei | 10^15 (0.001 ETH) |
 | NOX | 1 | 10^9 base units | 10^6 (0.001 NOX) |
 
-**The anonymity policy** (`src/policy.rs`, `ocean/ANONYMITY.md`):
+**The anonymity policy** (`src/policy.rs`):
 - a spend pays a nonzero `fee` to a named `fee_recipient` unless `self_submit` is set;
 - `public_amount`, and every output to someone else, is `unit × {1, 2, 5} × 10^k` unless
   `any_amount` is set.

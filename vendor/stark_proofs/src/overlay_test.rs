@@ -1,10 +1,10 @@
 // NONOS Operating System (AGPL-3.0-or-later)
-//! The launch circuit with its periodic slots overlaid (`Stack::overlay`), a v2
+//! The launch circuit with its periodic slots overlaid (`Stack::overlay`), a `fri8`
 //! layout: every kind's schedule shares one set of columns, as the regions
 //! already share their trace columns. The stacked launch circuit is untouched.
-// The v2 build overlays in the assembly itself, so there is no stacked
+// The `fri8` build overlays in the assembly itself, so there is no stacked
 // circuit to compare against there.
-#![cfg(not(feature = "v2"))]
+#![cfg(not(feature = "fri8"))]
 
 use crate::crypto::stark::air::{
     domain_params_blown, share_paths, stark_prove_ext_rounds, stark_verify_ext_rounds_positions,

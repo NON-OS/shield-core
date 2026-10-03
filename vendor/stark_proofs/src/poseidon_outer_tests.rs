@@ -68,7 +68,7 @@ fn the_settlement_outer_commits_under_poseidon() {
 /// THREAT.md 7a: a wrap cannot be built or costed over trees it cannot verify,
 /// and a cap of two is not those trees.
 ///
-/// Hours and a large working set, so it runs on the box before a release rather
+/// Hours and a large working set, so it runs on a large server before a release rather
 /// than in CI, alongside the other release-tier gates.
 #[test]
 #[ignore]

@@ -4,7 +4,7 @@
 //! inputs' total is `lo + hi * 2^32`, and each word is bound to its own cell,
 //! so a proof made for one pair does not verify for another, not even for a
 //! pair with the same total.
-#![cfg(feature = "claim")]
+#![cfg(all(test, feature = "claim"))]
 
 use crate::crypto::stark::air::{stark_prove_ext_rounds, stark_verify_ext_rounds_why};
 use crate::crypto::stark::field::Fp;

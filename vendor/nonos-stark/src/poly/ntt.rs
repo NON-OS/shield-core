@@ -41,7 +41,7 @@ pub fn ntt(coeffs: &[Fp], omega: Fp) -> Vec<Fp> {
      * split its own butterflies into tasks was handing the scheduler a task
      * per pair at the first stage: a quarter of a million tasks for a 2^19
      * column, nineteen times over, for every one of thousands of columns per
-     * coset. Sampled on the box, that scheduling was more of the DEEP phase
+     * coset. Sampled on a large server, that scheduling was more of the DEEP phase
      * than the DEEP arithmetic. The butterflies themselves are unchanged.
      *
      * The twiddles for a stage are the same in every block of that stage, so
@@ -57,7 +57,7 @@ pub fn ntt(coeffs: &[Fp], omega: Fp) -> Vec<Fp> {
      * megabyte, the middle stages read it at a stride of kilobytes, and
      * forty four threads each want their own: the tables alone exceed the
      * shared cache and the transform goes from arithmetic-bound to
-     * memory-bound. Measured on the box, that cost more than the
+     * memory-bound. Measured on a large server, that cost more than the
      * multiplications it removed. A running product is two registers.
      */
     let mut len = 2usize;

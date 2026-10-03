@@ -8,11 +8,15 @@
 //! Each slot's directory holds `proof.bin` (format 7, what a gate reads),
 //! `proof.f5` (the same proof per query, what the program-image emitters
 //! read), `publics.json` (the nine words) and `statement.json` (root, digest,
-//! kind, slot). The contexts are fixtures: their digests come from a public
-//! rule and stand for no real binary. A manifest lists every proof's keccak256
+//! kind, slot). `tree.json` holds every leaf and the root as decimal
+//! strings. The contexts are fixtures: their digests come from a public rule
+//! and stand for no real binary. A manifest lists every proof's keccak256
 //! and the circuit's parameter id and periodic root.
 
-use stark_proofs::attest::{leaf, params, prove_both, shape, Statement, Witness, DEPTH, KIND_BOOTLOADER, KIND_CAPSULE, KIND_KERNEL, KIND_PAD, POINTS, EXTRA_BLOWUP_BITS};
+use stark_proofs::attest::{
+    leaf, params, prove_both, shape, Statement, Witness, DEPTH, EXTRA_BLOWUP_BITS, KIND_BOOTLOADER,
+    KIND_CAPSULE, KIND_KERNEL, KIND_PAD, POINTS,
+};
 use stark_proofs::crypto::stark::air::{periodic_root, Poseidon, RATE};
 use stark_proofs::crypto::stark::field::Fp;
 use stark_proofs::crypto::stark::hash::keccak256;
@@ -53,6 +57,33 @@ fn main() {
         levels.push(up);
     }
     let root = levels[DEPTH][0];
+
+    /*
+     * The whole leaf set and the root, every word a decimal string: what an
+     * enrollment index publishes and what a page refolds. Strings, because a
+     * word runs to 2^64 and a JSON number read by a browser keeps 53 bits.
+     */
+    let quad = |q: &[Fp; RATE]| {
+        format!(
+            "[{}]",
+            q.iter()
+                .map(|v| format!("\"{}\"", v.to_u64()))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    };
+    let tree = format!(
+        "{{\n  \"depth\": {DEPTH},\n  \"root\": {},\n  \"leaves\": [\n    {}\n  ]\n}}\n",
+        quad(&root),
+        levels[0]
+            .iter()
+            .map(quad)
+            .collect::<Vec<_>>()
+            .join(",\n    ")
+    );
+    std::fs::create_dir_all(&out)
+        .and_then(|_| std::fs::write(format!("{out}/tree.json"), tree))
+        .unwrap_or_else(|e| die(&format!("{out}/tree.json: {e}")));
     let entropy: Vec<u8> = (0..512).map(|i| ((7 * i + 3) % 256) as u8).collect();
     let point = POINTS[0];
 
@@ -71,8 +102,13 @@ fn main() {
         }
         let w = Witness { siblings, right };
         let t = std::time::Instant::now();
-        let (f7, f5) = prove_both(&st, &w, &entropy, point).unwrap_or_else(|e| die(&format!("{name}: {e:?}")));
-        println!("{name:<11} {} bytes in {:.1} s", f7.len(), t.elapsed().as_secs_f64());
+        let (f7, f5) =
+            prove_both(&st, &w, &entropy, point).unwrap_or_else(|e| die(&format!("{name}: {e:?}")));
+        println!(
+            "{name:<11} {} bytes in {:.1} s",
+            f7.len(),
+            t.elapsed().as_secs_f64()
+        );
         let dir = format!("{out}/{name}");
         let words: Vec<String> = st.words().iter().map(|v| v.to_u64().to_string()).collect();
         let write = |f: &str, body: &[u8]| {
@@ -82,8 +118,14 @@ fn main() {
         };
         write("proof.bin", &f7);
         write("proof.f5", &f5);
-        write("proof.f5.publics.json", format!("{{\"publics\": [{}]}}\n", words.join(", ")).as_bytes());
-        write("publics.json", format!("{{\"publics\": [{}]}}\n", words.join(", ")).as_bytes());
+        write(
+            "proof.f5.publics.json",
+            format!("{{\"publics\": [{}]}}\n", words.join(", ")).as_bytes(),
+        );
+        write(
+            "publics.json",
+            format!("{{\"publics\": [{}]}}\n", words.join(", ")).as_bytes(),
+        );
         write(
             "statement.json",
             format!(
@@ -93,12 +135,19 @@ fn main() {
             )
             .as_bytes(),
         );
-        let _ = writeln!(manifest, "| {name} | {kind} | {index} | {} | `{}` |", f7.len(), hex(&keccak256(&f7)));
+        let _ = writeln!(
+            manifest,
+            "| {name} | {kind} | {index} | {} | `{}` |",
+            f7.len(),
+            hex(&keccak256(&f7))
+        );
         first.get_or_insert(st);
     }
     let st = first.unwrap_or_else(|| die("no slot"));
     let air = shape(&st.words()).unwrap_or_else(|| die("the shape"));
-    let pid = params(&st, point).unwrap_or_else(|e| die(&format!("{e:?}"))).id();
+    let pid = params(&st, point)
+        .unwrap_or_else(|e| die(&format!("{e:?}")))
+        .id();
     let _ = write!(
         manifest,
         "\nRoot: `{}`\n\nParameter id: `{}`\n\nPeriodic root: `{}`\n",
@@ -106,5 +155,6 @@ fn main() {
         hex(&pid),
         hex(&periodic_root(&air, EXTRA_BLOWUP_BITS))
     );
-    std::fs::write(format!("{out}/MANIFEST.md"), manifest).unwrap_or_else(|e| die(&format!("manifest: {e}")));
+    std::fs::write(format!("{out}/MANIFEST.md"), manifest)
+        .unwrap_or_else(|e| die(&format!("manifest: {e}")));
 }

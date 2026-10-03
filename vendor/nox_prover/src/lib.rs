@@ -12,6 +12,10 @@
 //! The proof is verified here before it is returned, so a caller never holds
 //! bytes the chain would refuse.
 
+#[cfg(feature = "fri8")]
+pub mod activity;
+#[cfg(all(test, feature = "fri8"))]
+mod activity_vector_test;
 pub mod api;
 #[cfg(test)]
 mod error_code_test;
@@ -22,15 +26,13 @@ pub mod policy;
 mod profile_test;
 mod proof;
 #[cfg(test)]
-mod rank_vectors_test;
-#[cfg(test)]
 mod shared_test;
 #[cfg(all(feature = "wasm-threads", target_arch = "wasm32"))]
 mod thread_cache;
 #[cfg(test)]
-mod v2_emit_test;
+mod transfer_emit_test;
 #[cfg(test)]
-mod v2_review_test;
+mod transcript_review_test;
 #[cfg(feature = "wasm")]
 mod wasm;
 

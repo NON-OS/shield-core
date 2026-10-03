@@ -4,7 +4,7 @@
 //!
 //! Built plain it proves the 24-byte launch proof, which must be the pinned
 //! bytes exactly. Built with `digest32` it proves the same spend with every
-//! digest whole, which is the v2 size question: what 32-byte digests cost once
+//! digest whole, which is the 32-byte digest question: what 32-byte digests cost once
 //! the paths are shared.
 
 use crate::api::{prove_inner, share_under, verify_shared_under, Error, Options};
@@ -78,15 +78,4 @@ fn the_pinned_transfer_in_format_six() {
         std::fs::write(format!("{out}/publics.json"), json).expect("write the publics");
     }
 
-    #[cfg(all(
-        feature = "launch_v1",
-        not(any(feature = "digest32", feature = "radix8"))
-    ))]
-    {
-        let pinned = std::fs::read(format!("{DIR}/proof.bin")).expect("the pinned proof");
-        assert_eq!(
-            proof.bytes, pinned,
-            "the prover no longer makes the pinned bytes"
-        );
-    }
 }

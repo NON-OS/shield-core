@@ -165,8 +165,8 @@ pub fn assemble_with_extra_classes(
     let mut wired = WiredMultiGen::new_kinds(regions, &kinds, groups)
         .with_mask(MASK_COLUMNS)
         .with_ext_challenges();
-    // v2: every kind's periodic slots on one set of columns (docs/17).
-    #[cfg(feature = "v2")]
+    // Every kind's periodic slots on one set of columns (docs/17).
+    #[cfg(feature = "fri8")]
     wired.wired_mut().overlay_periodic();
     /*
      * One intent is a statement a chain can verify directly, and its publics

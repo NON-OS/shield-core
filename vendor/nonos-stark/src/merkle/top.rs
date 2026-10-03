@@ -93,7 +93,9 @@ impl TreeTop {
     }
 
     /// The inverse of `to_bytes`, refusing anything not shaped like a tree:
-    /// each level half the one below, ending at a single root.
+    /// each level half the one below, ending at a single root, and every node
+    /// the hash of its two children. A caller that checks the root then holds
+    /// every stored level, not only the top one.
     pub fn from_bytes(b: &[u8]) -> Option<TreeTop> {
         let u32_at = |i: usize| -> Option<usize> {
             Some(u32::from_le_bytes(b.get(i..i + 4)?.try_into().ok()?) as usize)
@@ -126,6 +128,19 @@ impl TreeTop {
         if layers.last()?.len() != 1 || cut > 32 {
             return None;
         }
+        /*
+         * A damaged inner node under a correct root would load, and then
+         * every opening through it would fail to verify, proof after proof.
+         * Refused here instead, so the caller sees a bad cache and rebuilds.
+         */
+        for pair in layers.windows(2) {
+            let (below, above) = (&pair[0], &pair[1]);
+            for (i, node) in above.iter().enumerate() {
+                if *node != hash_node(&below[2 * i], &below[2 * i + 1]) {
+                    return None;
+                }
+            }
+        }
         Some(TreeTop { cut, layers })
     }
 }
@@ -151,5 +166,21 @@ mod tests {
         }
         let wrong = &digests[8..16];
         assert!(top.open(0, wrong).is_empty(), "a chunk from elsewhere opened a path");
+    }
+
+    /// A byte flipped in any stored level is refused, though the root bytes
+    /// are untouched.
+    #[test]
+    fn a_damaged_inner_level_is_refused() {
+        let leaves: Vec<Fp> = (0..256u64).map(|i| Fp::from_u64(i * 7919 + 3)).collect();
+        let tree = MerkleTree::commit(&leaves);
+        let bytes = TreeTop::of(&tree, 3).map(|t| t.to_bytes()).unwrap_or_default();
+        assert!(TreeTop::from_bytes(&bytes).is_some());
+        /* level 0 digest 5, then level 1 digest 2: 12 header, 4 per length */
+        for at in [12 + 4 + 32 * 5 + 7, 12 + 4 + 32 * 32 + 4 + 32 * 2] {
+            let mut bad = bytes.clone();
+            bad[at] ^= 1;
+            assert!(TreeTop::from_bytes(&bad).is_none(), "byte {at} flipped and loaded");
+        }
     }
 }

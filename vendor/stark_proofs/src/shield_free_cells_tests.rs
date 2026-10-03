@@ -2,14 +2,11 @@
 // The same question as free_wired_cells, asked of the circuit that guards the
 // pool rather than of the outer.
 //
-// The join-split argues its copy constraint at beta = 5 and gamma = 7, set in
-// four places under shield/wire*.rs, never drawn. So the forgery
-// wired_forgery_tests builds against the outer applies here too, if the
-// circuit leaves cells for it to spend: a cell no region constrains, in a class
-// with a partner, in a group that holds a second such cell.
-//
-// This matters more than the outer finding. A forged outer fakes a settlement.
-// A forged inner fakes a spend, which is the statement the pool pays out on.
+// A wired cell that no region constrains, in a class with a partner, in a
+// group that holds a second such cell, is a cell a prover could move without
+// any rule noticing. The join-split is held to having none, independently of
+// how the copy constraint's challenges are drawn: defence in depth on the
+// statement the pool pays out on.
 
 use crate::crypto::stark::air::Air;
 use crate::crypto::stark::field::Fp;
@@ -19,21 +16,17 @@ use alloc::vec::Vec;
 
 /// The join-split leaves nothing a compensated forgery can spend.
 ///
-/// Not ignored, and not a report. The circuit is argued at constants a prover
-/// reads off the layout, and the only reason that is survivable is that every
-/// cell its permutation binds is also held by a region's own rules. That is a
-/// measured property of the wiring today, not a design invariant, and one new
-/// region carrying witness cells would end it silently.
-///
-/// So it is a gate. If this ever fails, the pool's spend statement has become
-/// forgeable and the two round Poseidon prover is no longer optional.
+/// Not ignored, and not a report: a gate. Every cell the permutation binds is
+/// also held by a region's own rules, so the copy constraint is never the only
+/// thing standing between a prover and a moved cell. One new region carrying
+/// unconstrained witness cells would end that silently, and this fails first.
 #[test]
 fn the_join_split_leaves_no_cell_a_forgery_could_spend() {
     let (per_group, total_bound) = free_bound_cells();
     assert!(
         !per_group.iter().any(|&n| n >= 2),
         "a group holds two cells nothing but the wiring binds, out of {total_bound} bound: \
-         the spend statement is now forgeable at its fixed challenges, per group {per_group:?}"
+         a cell is free of every rule, per group {per_group:?}"
     );
 }
 
@@ -186,12 +179,9 @@ fn how_many_cells_the_join_split_leaves_spendable() {
     std::println!(
         "{}",
         if per_group.iter().any(|&n| n >= 2) {
-            "one group holds two cells nothing but the wiring binds, so the spend \
-             statement is forgeable at its fixed challenges"
+            "one group holds two cells nothing but the wiring binds"
         } else {
-            "no group holds two such cells, so the two cell construction does not \
-             close on this circuit; the argument is still made at a point the \
-             prover knows"
+            "no group holds two such cells"
         }
     );
 }

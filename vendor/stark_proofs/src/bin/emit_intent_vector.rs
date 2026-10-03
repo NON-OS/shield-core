@@ -2,11 +2,11 @@
 //! Writes spec/shield-intent.json: one transfer, every input that defines it,
 //! and the thirty-six words the pool settles.
 //!
-//! THREAT 5 is that no client has proved a spend. Its first half is narrower
-//! and is checkable without a prover: the client and the circuit have to agree
+//! Half of the client-prover seam is checkable without a prover: the client
+//! and the circuit have to agree
 //! on what a transfer *is*. Two implementations of one statement, in two
-//! languages, is the check that found every seam defect this week, and the
-//! intent is where the two meet: `ocean` builds these words to hand a relayer,
+//! languages, is where seams are found, and the intent is where the two meet:
+//! a client builds these words to hand a relayer,
 //! and the circuit binds each of them to the cell that computes it.
 //!
 //! Every input is emitted beside the output, not just the result. A vector that

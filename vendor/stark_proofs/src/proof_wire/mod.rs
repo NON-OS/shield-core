@@ -19,7 +19,7 @@ mod write;
 pub use ext::{serialize_pre, serialize_rounds, ROUNDS_HEADER};
 pub use header::{check_header, read_header, write_header, Header, ParamSet};
 pub use header::{
-    FORMAT_SHARED, FORMAT_SHARED_BUILD, FORMAT_V2, FORMAT_VERSION, HEADER_BYTES, MAGIC,
+    FORMAT_SHARED, FORMAT_SHARED_BUILD, FORMAT_7, FORMAT_VERSION, HEADER_BYTES, MAGIC,
     PROTOCOL_VERSION,
 };
 pub use layout::{FriLayer, Layout, Manifest, Section, LAYOUT_DOMAIN};

@@ -1,21 +1,21 @@
 // NONOS Operating System (AGPL-3.0-or-later)
-//! Review material for the v2 transcript: each shape's parameter-identity
+//! Review material for the format 7 transcript: each shape's parameter-identity
 //! preimage, and a transcript trace of one pinned proof replayed from its
 //! bytes. Needs `stark_proofs/kat` for the trace.
 //!
-//!     cargo test --release -p nox_prover --features v2,parallel,kat -- \
-//!         v2_review --ignored --nocapture
-#![cfg(all(feature = "v2", not(any(feature = "not_before", feature = "claim"))))]
+//!     cargo test --release -p nox_prover --features fri8,parallel,kat -- \
+//!         transcript_review --ignored --nocapture
+#![cfg(all(feature = "fri8", not(any(feature = "not_before", feature = "claim"))))]
 
 use stark_proofs::crypto::stark::air::stark_verify_ext_rounds_shared_why;
 use stark_proofs::crypto::stark::field::{Fp, P};
-use stark_proofs::crypto::stark::fri_ext::V2_SHAPES;
+use stark_proofs::crypto::stark::fri_ext::QUERY_SHAPES;
 use stark_proofs::proof_wire::{deserialize_rounds_shared, ParamSet};
 use stark_proofs::shield::join::join_split_shape;
 use stark_proofs::shield::member::TREE_DEPTH;
 use stark_proofs::shield_params::direct;
 
-const SPEC: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/v2");
+const SPEC: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/transfer");
 
 fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
@@ -34,15 +34,15 @@ fn publics(dir: &str) -> Vec<Fp> {
 
 #[cfg(feature = "kat")]
 #[test]
-#[ignore = "review tier: writes spec/v2/review"]
-fn v2_review() {
+#[ignore = "review tier: writes spec/transfer/review"]
+fn transcript_review() {
     let out = format!("{SPEC}/review");
     std::fs::create_dir_all(&out).expect("review dir");
     let words = publics(&format!("{SPEC}/transfer-eth-shape1"));
     let air = join_split_shape(TREE_DEPTH, &words);
 
-    let mut md = String::from("# v2 parameter-identity preimages\n\nLayout: `NOX_PARAMS_V1` (13 bytes), then 13 u32 LE (n_queries, grind_bits, extra_blowup_bits, fri_fold_log, fri_stop_log, digest_bytes, trace_width, n_periodic, log_trace_len, constraint_degree, window_size, num_transition, n_boundary), coset_shift u64 LE, commit_grind_bits u32 LE, grind_chunks u32 LE, then the four v2 u32 LE fields: transcript version 2, DEEP grind 19, draw rule 1, shape id. Identity = keccak256(preimage).\n\n");
-    for (id, q, g) in V2_SHAPES {
+    let mut md = String::from("# Parameter-identity preimages\n\nLayout: `NOX_PARAMS_V1` (13 bytes), then 13 u32 LE (n_queries, grind_bits, extra_blowup_bits, fri_fold_log, fri_stop_log, digest_bytes, trace_width, n_periodic, log_trace_len, constraint_degree, window_size, num_transition, n_boundary), coset_shift u64 LE, commit_grind_bits u32 LE, grind_chunks u32 LE, then the four v2 u32 LE fields: transcript version 2, DEEP grind 19, draw rule 1, shape id. Identity = keccak256(preimage).\n\n");
+    for (id, q, g) in QUERY_SHAPES {
         let p = ParamSet::of(&air, q, g, direct::EXTRA_BLOWUP_BITS);
         let pre = p.preimage();
         md.push_str(&format!("## shape {id}: {q} queries, {g}-bit grind\n\n- preimage ({} bytes): `{}`\n- identity: `{}`\n- fields: {:?}\n\n", pre.len(), hex(&pre), hex(&p.id()), p));
@@ -50,7 +50,7 @@ fn v2_review() {
     std::fs::write(format!("{out}/PARAMS.md"), md).expect("write");
 
     // Trace: replay the shape 1 proof from its bytes, recording every operation.
-    let (_, q, g) = V2_SHAPES[0];
+    let (_, q, g) = QUERY_SHAPES[0];
     let params = ParamSet::of(&air, q, g, direct::EXTRA_BLOWUP_BITS);
     let bytes = std::fs::read(format!("{SPEC}/transfer-eth-shape1/proof.bin")).expect("proof");
     let root_hex = std::fs::read_to_string(format!("{SPEC}/MANIFEST.md")).expect("manifest");
@@ -111,8 +111,8 @@ fn v2_review() {
     println!("{} transcript events", events.len());
 }
 
-/// The v2 counterpart of `both_identities_are_pinned_for_the_shipped_point`:
-/// the three shape identities at the launch circuit, as spec/v2/MANIFEST.md
+/// The format 7 counterpart of `both_identities_are_pinned_for_the_shipped_point`:
+/// the three shape identities at the launch circuit, as spec/transfer/MANIFEST.md
 /// records them. A change here moves the verifier constants with it.
 #[test]
 fn the_three_shape_identities_are_pinned() {
@@ -123,7 +123,7 @@ fn the_three_shape_identities_are_pinned() {
         "7ad145c3e095bb83fb9841d0ccf3556a3349d1cf551328166770725c88f5ae44",
         "94ef16ef21b538d3e4fa340ddfea9a1ddc9afbb80c725374eaa739902e37079b",
     ];
-    for ((id, q, g), want) in V2_SHAPES.iter().zip(pinned) {
+    for ((id, q, g), want) in QUERY_SHAPES.iter().zip(pinned) {
         let p = ParamSet::of(&air, *q, *g, direct::EXTRA_BLOWUP_BITS);
         assert_eq!(hex(&p.id()), want, "shape {id}");
     }
@@ -143,10 +143,10 @@ fn words_u64(dir: &str) -> Vec<u64> {
     publics(dir).iter().map(|v| v.to_u64()).collect()
 }
 
-/// The wallet-side verify takes all four pinned v2 proofs, each at the shape
+/// The wallet-side verify takes all four pinned transfer proofs, each at the shape
 /// its header names, under the pinned periodic root.
 #[test]
-fn nox_prover_verifies_the_four_pinned_v2_proofs() {
+fn nox_prover_verifies_the_four_pinned_transfer_proofs() {
     assert_eq!(
         crate::api::PERIODIC_ROOT,
         pinned_root(),
@@ -172,7 +172,7 @@ fn a_bad_deep_nonce_ends_the_replay() {
     use stark_proofs::crypto::stark::air::replay_pre::replay_comp_z_pre;
     let dir = format!("{SPEC}/transfer-eth-shape1");
     let words = publics(&dir);
-    let (_, q, g) = V2_SHAPES[0];
+    let (_, q, g) = QUERY_SHAPES[0];
     let air = join_split_shape(TREE_DEPTH, &words);
     let params = ParamSet::of(&air, q, g, direct::EXTRA_BLOWUP_BITS);
     let bytes = std::fs::read(format!("{dir}/proof.bin")).expect("proof");
@@ -213,7 +213,7 @@ fn a_bad_deep_nonce_ends_the_replay() {
 fn a_proof_with_another_query_count_is_refused() {
     let dir = format!("{SPEC}/transfer-eth-shape1");
     let words = publics(&dir);
-    let (_, q, g) = V2_SHAPES[0];
+    let (_, q, g) = QUERY_SHAPES[0];
     let air = join_split_shape(TREE_DEPTH, &words);
     let params = ParamSet::of(&air, q, g, direct::EXTRA_BLOWUP_BITS);
     let bytes = std::fs::read(format!("{dir}/proof.bin")).expect("proof");
@@ -236,7 +236,7 @@ fn a_proof_with_another_query_count_is_refused() {
     )
     .is_err());
     let (skel, streams) = deserialize_rounds_shared(&bytes, &params).expect("parses");
-    for (_, q2, g2) in &V2_SHAPES[1..] {
+    for (_, q2, g2) in &QUERY_SHAPES[1..] {
         let v = join_split_shape(TREE_DEPTH, &words);
         assert!(stark_verify_ext_rounds_shared_why(
             v,

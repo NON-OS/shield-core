@@ -206,3 +206,45 @@ pub unsafe extern "C" fn nox_free(s: *mut c_char) {
     let mut owned = unsafe { CString::from_raw(s) }.into_bytes();
     owned.fill(0);
 }
+
+/// Prove a weekly activity claim (`activity::prove_activity`). Returns
+/// `NOX_OK` and sets `*out` to `{ "proof": hex, "publics": [...] }`, or
+/// `NOX_ERR_REQUEST` and sets `*out` to the reason; a null argument returns
+/// `NOX_ERR_NULL` and sets nothing.
+///
+/// # Safety
+/// `request` and `seed` are NUL-terminated UTF-8, `entropy` points to
+/// `entropy_len` readable bytes, and `out` is writable.
+#[cfg(feature = "fri8")]
+#[no_mangle]
+pub unsafe extern "C" fn nox_activity_prove(
+    request: *const c_char,
+    seed: *const c_char,
+    entropy: *const u8,
+    entropy_len: usize,
+    out: *mut *mut c_char,
+) -> i32 {
+    if request.is_null() || seed.is_null() || entropy.is_null() || out.is_null() {
+        return NOX_ERR_NULL;
+    }
+    // SAFETY: non-null, and the caller's contract is NUL-terminated strings
+    // and `entropy_len` readable bytes.
+    let (req, sd, ent) = unsafe {
+        (
+            CStr::from_ptr(request).to_str(),
+            CStr::from_ptr(seed).to_str(),
+            core::slice::from_raw_parts(entropy, entropy_len),
+        )
+    };
+    let result = match (req, sd) {
+        (Ok(r), Ok(s)) => crate::activity::prove_activity(r, s, ent).map(|(p, w)| crate::activity::to_json(&p, &w)),
+        _ => Err("the request or the seed is not UTF-8".to_string()),
+    };
+    let (code, text) = match result {
+        Ok(json) => (NOX_OK, json),
+        Err(why) => (NOX_ERR_REQUEST, why),
+    };
+    // SAFETY: `out` is non-null and writable by the caller's contract.
+    unsafe { *out = owned_c(text) };
+    code
+}

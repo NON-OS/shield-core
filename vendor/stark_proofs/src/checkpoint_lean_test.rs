@@ -4,13 +4,11 @@
 //! The Lean proves the checkpoint rule over a schedule: `slotCol`, `cpCol` and
 //! `opSel` as functions of the rounds, depth, span, opening count and row.
 //! Those proofs say nothing about the circuit unless the circuit's periodic
-//! columns are that schedule. This test reads them from the assembled launch
+//! columns are that schedule. This test reads them from the assembled
 //! join-split and compares every row of every membership instance with the
 //! Lean definitions, transcribed term for term in `crate::lean_schedule`. It also holds the
 //! instances and their checkpoint rows to the lists the Lean decides
-//! (`launchMembers`, `launch_checkpoint_rows`), so neither side can move alone.
-#![cfg(not(feature = "launch_v1"))]
-
+//! (`joinSplitMembers`, `join_split_checkpoint_rows`), so neither side can move alone.
 use crate::crypto::stark::air::{Air, ShieldRegion};
 use crate::crypto::stark::field::Fp;
 use crate::lean_schedule::{cp_col, op_sel, slot_col};
@@ -19,8 +17,8 @@ use crate::shield::test::scenario::balanced_deployed;
 
 const WIDTH: usize = 8;
 
-/// `Shield.Checkpoint.launchMembers`: first row, depth, openings.
-const LAUNCH_MEMBERS: [(usize, usize, usize); 10] = [
+/// `Shield.Checkpoint.joinSplitMembers`: first row, depth, openings.
+const JOIN_SPLIT_MEMBERS: [(usize, usize, usize); 10] = [
     (8, 1, 2),
     (136, 1, 2),
     (264, 1, 2),
@@ -33,8 +31,8 @@ const LAUNCH_MEMBERS: [(usize, usize, usize); 10] = [
     (4328, 32, 1),
 ];
 
-/// `Shield.Checkpoint.launch_checkpoint_rows`.
-const LAUNCH_CHECKPOINT_ROWS: [usize; 20] = [
+/// `Shield.Checkpoint.join_split_checkpoint_rows`.
+const JOIN_SPLIT_CHECKPOINT_ROWS: [usize; 20] = [
     39, 103, 167, 231, 295, 359, 423, 487, 1543, 2599, 2791, 2855, 2919, 2983, 3047, 3111, 3175,
     3239, 4295, 5351,
 ];
@@ -112,6 +110,6 @@ fn the_membership_selectors_are_the_schedule_lean_proves() {
         "membership rows checked {checked}, checkpoints {}",
         checkpoints.len()
     );
-    assert_eq!(members, LAUNCH_MEMBERS);
-    assert_eq!(checkpoints, LAUNCH_CHECKPOINT_ROWS);
+    assert_eq!(members, JOIN_SPLIT_MEMBERS);
+    assert_eq!(checkpoints, JOIN_SPLIT_CHECKPOINT_ROWS);
 }

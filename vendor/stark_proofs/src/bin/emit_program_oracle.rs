@@ -22,6 +22,7 @@
 //!
 //!     emit_program_oracle <proof> <out.json> direct q=<n> grind=<g> extra=<e>
 //!     emit_program_oracle <proof> <out.json> attest q=<n> grind=<g> extra=<e>
+//!     emit_program_oracle <proof> <out.json> activity q=<n> grind=<g> extra=<e>
 //!
 //! Without `inner=` the outer is the release fixture's. With `direct` the
 //! circuit is the join-split itself, proved for the chain with no outer
@@ -102,7 +103,8 @@ fn main() {
         die("usage: emit_program_oracle <proof> <out.json> [inner=<f> intent=<f>] [point=settlement]")
     };
     let attest = a.iter().any(|s| s == "attest");
-    let direct = attest || a.iter().any(|s| s == "direct");
+    let activity = a.iter().any(|s| s == "activity");
+    let direct = attest || activity || a.iter().any(|s| s == "direct");
     let publics: Vec<Fp> = Json(&read_text(&format!("{proof_path}.publics.json")))
         .u64s("publics")
         .into_iter()
@@ -124,7 +126,14 @@ fn main() {
         point_from_args(&a)
     };
     let h = hasher();
-    let (mut air, assembled) = if attest {
+    let (mut air, assembled) = if activity {
+        (
+            stark_proofs::activity::shape(&publics)
+                .unwrap_or_else(|| die("the publics are not an activity statement's fourteen words"))
+                .into_wired(),
+            publics.clone(),
+        )
+    } else if attest {
         (
             stark_proofs::attest::shape(&publics)
                 .unwrap_or_else(|| die("the publics are not an attestation statement's nine words"))

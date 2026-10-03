@@ -24,7 +24,7 @@
 //! twenty terms, more than half of one day's regression. Nobody asked what it
 //! cost because nothing made them.
 #![cfg_attr(
-    any(feature = "launch_v1", feature = "v2"),
+    feature = "fri8",
     allow(dead_code, unused_imports)
 )]
 
@@ -106,10 +106,10 @@ const EMITTED: usize = 2375;
 /// without anyone seeing the number, which is how two hundred and twenty terms
 /// arrived in one morning.
 ///
-/// The wrap is priced for the stacked circuit. Under v2 the periodic overlay
+/// The wrap is priced for the stacked circuit. Under `fri8` the periodic overlay
 /// puts every kind's slots on shared columns, 59 where the stack has 97, so
 /// this pin belongs to the stacked builds only.
-#[cfg(not(any(feature = "launch_v1", feature = "v2")))]
+#[cfg(not(feature = "fri8"))]
 #[test]
 fn the_inner_shape_is_the_one_the_wrap_is_priced_against() {
     let js = balanced_at(DEPLOYED, Break::None);

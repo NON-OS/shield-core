@@ -8,8 +8,8 @@
 //! the prover.
 //!
 //! It exists for two readers. `prove_from_witness` takes it and produces a
-//! transfer proof, which is THREAT 5 end to end. And `ocean` writes the same
-//! spend with `witness.zig`, so the two files can be compared word for word:
+//! transfer proof, end to end. And a client writes the same spend in its own
+//! code, so the two files can be compared word for word:
 //! two languages, one layout, and a disagreement that is a diff rather than a
 //! proof that will not parse.
 //!
@@ -23,9 +23,9 @@ use stark_proofs::shield::note::{note_parts, Note, POOL_LOG_ROUNDS};
 use stark_proofs::shield::test::fixture::{owned, plain, secret};
 use stark_proofs::shield::witness_wire::{write, SpendWitness};
 
-/// The client's tree depth, because the point of this file is that `ocean` can
-/// write the same one and the two can be diffed. `tree.zig` fixes its depth at
-/// `DEPTH = 32`, so a witness at any other depth is a file the client cannot
+/// The client's tree depth, because the point of this file is that a client
+/// can write the same one and the two can be diffed. The client fixes its depth
+/// at 32, so a witness at any other depth is a file the client cannot
 /// produce and the comparison never happens.
 ///
 /// It is also the deployed depth, so what this writes is the shape a real
@@ -124,9 +124,8 @@ fn main() {
 
     /*
      * The same words as a vector, so the client can be held to them without
-     * shipping a binary through a review. `ocean` rebuilds this spend from its
-     * own code and compares word for word, and `ci/vector_agree.py` checks that
-     * it still does.
+     * shipping a binary through a review. A client rebuilds this spend from its
+     * own code and compares word for word.
      *
      * A witness is the private half of a spend, so this file carries both spend
      * secrets in the clear, at words 2 through 9. That is the point of it and it

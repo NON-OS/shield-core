@@ -30,7 +30,7 @@ use alloc::vec::Vec;
 /// trace leaf reads its row exactly once, so a transpose is the same gather
 /// plus a full extra write pass and a barrier between the two, and the
 /// transpose is memory bound where the gather overlaps with hashing.
-/// Measured on the box at the settlement outer's shape: 1,815 seconds
+/// Measured on a large server at the settlement outer's shape: 1,815 seconds
 /// transposed against 840 gathered, at 31 of 56 cores against 45. A bench at
 /// a short trace length put the two within 12 per cent of each other, which
 /// is what a working set that fits in cache will tell you.
@@ -80,7 +80,7 @@ mod tests {
     /// Read it as a regression line and not as a verdict between shapes: at
     /// this trace length the coset fits in cache, and the transposed
     /// committer this one replaced was within 12 per cent here while being
-    /// more than twice as slow on the box. A shape question about memory has
+    /// more than twice as slow on a large server. A shape question about memory has
     /// to be asked at the size that has the memory problem.
     #[test]
     #[ignore]

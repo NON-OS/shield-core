@@ -24,7 +24,7 @@ request with a fee and no `fee_recipient`, or a `fee_recipient` beside a zero fe
 ## Anonymous by default
 
 `prove` refuses a request that breaks an anonymity default, and says which one (`src/policy.rs`,
-the same rules as `ocean/src/anon`):
+the wallet's own anonymity rules):
 
 - **A submitter.** A spend pays a nonzero fee to a named `fee_recipient`, so your own address never
   sends it. `"self_submit": true` opts out.
@@ -33,7 +33,7 @@ the same rules as `ocean/src/anon`):
   `"unit"`. `"any_amount": true` opts out.
 
 Each opt-out is listed in the proof JSON's `"weakened"`. Timing and fresh withdrawal addresses are
-the calling wallet's job; `ocean/ANONYMITY.md` describes both.
+the calling wallet's job.
 
 ## The periodic cache
 

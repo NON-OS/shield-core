@@ -50,22 +50,22 @@ pub const FORMAT_VERSION: u16 = 5;
 /// parameter identity: only the encoding moves, which is what this number is.
 pub const FORMAT_SHARED: u16 = 6;
 
-/// 7: format 6 on the v2 transcript (docs/17): FOLD = 8 values a FRI layer,
+/// 7: format 6 on the format 7 transcript (docs/17): FOLD = 8 values a FRI layer,
 /// the DEEP nonce right after the periodic claims at z, three fold nonces,
-/// eight query nonces, 32-byte digests. The v2 build writes and reads only
+/// eight query nonces, 32-byte digests. The `fri8` build writes and reads only
 /// this for shared-path artifacts.
-pub const FORMAT_V2: u16 = 7;
+pub const FORMAT_7: u16 = 7;
 
 /// The shared-path format this build writes and reads.
-#[cfg(not(feature = "v2"))]
+#[cfg(not(feature = "fri8"))]
 pub const FORMAT_SHARED_BUILD: u16 = FORMAT_SHARED;
-#[cfg(feature = "v2")]
-pub const FORMAT_SHARED_BUILD: u16 = FORMAT_V2;
+#[cfg(feature = "fri8")]
+pub const FORMAT_SHARED_BUILD: u16 = FORMAT_7;
 
-/// The transcript version a v2 identity records.
-pub const TRANSCRIPT_V2: u32 = 2;
+/// The transcript version a format 7 identity records.
+pub const TRANSCRIPT_PROTOCOL: u32 = 2;
 
-/// The draw rule a v2 identity records: 1, exact streams (docs/15).
+/// The draw rule a format 7 identity records: 1, exact streams (docs/15).
 pub const DRAW_RULE_EXACT: u32 = 1;
 
 /// What the decoded statement means. Moves when the relation moves, which is
@@ -228,17 +228,17 @@ impl ParamSet {
             buf.extend_from_slice(&self.commit_grind_bits.to_le_bytes());
         }
         /*
-         * v2: four fields no v1 identity has (docs/17): the transcript
+         * Four fields no v1 identity has (docs/17): the transcript
          * version, the DEEP grind, the draw rule and the shape id. So no v1
-         * identity equals a v2 one, and no v2 shape's equals another's. Only
+         * identity equals a format 7 one, and no format 7 shape's equals another's. Only
          * on the launch transcript (the split query grind), the one that runs
          * the DEEP grind and binds a shape: an identity never records a grind
          * its transcript did not run.
          */
-        #[cfg(feature = "v2")]
+        #[cfg(feature = "fri8")]
         if self.grind_chunks > 1 {
             for v in [
-                TRANSCRIPT_V2,
+                TRANSCRIPT_PROTOCOL,
                 crate::crypto::stark::fri_ext::DEEP_GRIND_BITS,
                 DRAW_RULE_EXACT,
                 crate::crypto::stark::fri_ext::shape_id(self.n_queries as usize) as u32,
@@ -396,9 +396,9 @@ mod identity_covers_what_it_claims {
         let p = base();
         let pre = p.preimage();
         assert_eq!(&pre[..PARAMS_DOMAIN.len()], PARAMS_DOMAIN);
-        // v2 appends four u32 fields: transcript version, DEEP grind, draw
+        // Format 7 appends four u32 fields: transcript version, DEEP grind, draw
         // rule and shape id (docs/17).
-        let v2_fields = if cfg!(feature = "v2") && p.grind_chunks > 1 {
+        let shape_fields = if cfg!(feature = "fri8") && p.grind_chunks > 1 {
             4 * 4
         } else {
             0
@@ -412,7 +412,7 @@ mod identity_covers_what_it_claims {
         };
         assert_eq!(
             pre.len(),
-            PARAMS_DOMAIN.len() + 4 * 13 + 8 + split + v2_fields
+            PARAMS_DOMAIN.len() + 4 * 13 + 8 + split + shape_fields
         );
         let bare = &pre[PARAMS_DOMAIN.len()..];
         assert_ne!(p.id(), keccak256(bare), "the tag is not reaching the hash");

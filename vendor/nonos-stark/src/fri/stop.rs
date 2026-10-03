@@ -30,7 +30,7 @@ pub const FRI_STOP_LOG: u32 = 8;
 /// bytes. Four values sit under one leaf, so the factor costs a query three
 /// extra field elements a layer against a whole path saved.
 ///
-/// `radix8` folds eight at a time, for v2: three layers where radix 4 takes
+/// `radix8` folds eight at a time, for the `fri8` build: three layers where radix 4 takes
 /// four, each a curve of degree 7 in its challenge, which the commit grind
 /// covers (docs/12 Section 1). A different build, proofs and parameter
 /// identity, as `digest32` is.

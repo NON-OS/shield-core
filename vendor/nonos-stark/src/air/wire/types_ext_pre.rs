@@ -26,7 +26,7 @@ pub struct StarkProofExtPre {
     /// The claimed periodic-column evaluations at the out-of-domain point.
     pub periodic_z: Vec<Fp2>,
     pub openings: Vec<PeriodicOpeningExt>,
-    /// v2: the nonce ground before the DEEP coefficients are drawn (docs/17
+    /// The nonce ground before the DEEP coefficients are drawn (docs/17
     /// step 8). Zero, and not on the wire, on every v1 proof.
     pub deep_nonce: u64,
 }

@@ -1,7 +1,7 @@
 // NONOS Operating System (AGPL-3.0-or-later)
 //! A witness crosses the boundary and the transfer it describes is provable.
 //!
-//! THREAT 5's second half. The first half was the two languages agreeing on
+//! The second half of the client-prover seam. The first half is the two sides agreeing on
 //! what a transfer is; this is the private half moving, so a proof can be made
 //! from a witness a client produced rather than from a fixture the prover built
 //! for itself.

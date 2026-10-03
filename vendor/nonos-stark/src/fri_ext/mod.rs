@@ -14,7 +14,7 @@ mod types;
 mod verify;
 
 pub use grind::{
-    shape_accepts, shape_id, ATTEST_SHAPE, COMMIT_GRIND_BITS, DEEP_GRIND_BITS, GRIND_CHUNKS, V2_SHAPES,
+    shape_accepts, shape_id, ATTEST_SHAPE, COMMIT_GRIND_BITS, DEEP_GRIND_BITS, GRIND_CHUNKS, QUERY_SHAPES,
 };
 pub use prove::{fri_prove_ext, fri_prove_ext_layer_zero, fri_prove_ext_layer_zero_ground};
 pub use types::{FriProofExt, LayerOpeningExt, QueryProofExt};

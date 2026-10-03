@@ -72,6 +72,15 @@ int32_t nox_prove(const char *request, const char *seed,
                   const uint8_t *entropy, size_t entropy_len,
                   char **out);
 
+/* Prove a weekly activity claim (builds with the format 7 transcript only). The
+ * request is the week's root and leaves, up to four of the wallet's spent
+ * notes and the payout digest; the seed is {"sk": [a, b, c, d]}. On NOX_OK,
+ * *out is {"proof": "<format 7 hex>", "publics": [18 decimal strings]};
+ * otherwise it is the reason. */
+int32_t nox_activity_prove(const char *request, const char *seed,
+                           const uint8_t *entropy, size_t entropy_len,
+                           char **out);
+
 /* Free a string the library returned; it is wiped first. */
 void nox_free(char *s);
 

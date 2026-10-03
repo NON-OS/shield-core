@@ -15,7 +15,7 @@ use alloc::vec::Vec;
 /// They share a leaf because a fold reads both. Committing them apart bought a
 /// second path per layer and nothing else, and it is why raising the fold factor
 /// made a proof larger rather than smaller: a fold of `k` paid `k` paths where a
-/// shared leaf pays one. THREAT 6a.
+/// shared leaf pays one.
 #[derive(Clone)]
 pub struct LayerOpeningExtP {
     pub a: Fp2,

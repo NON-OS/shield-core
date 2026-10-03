@@ -28,11 +28,9 @@ impl MultiMembership {
         /*
          * The checkpoint: the last round of the last compression. Its successor
          * row holds the walked digest in the rate lanes and zero in the capacity
-         * lanes, and nothing else. It used to be a slot boundary like the others,
-         * which injected the direction and sibling of a level that does not
-         * exist; in the production form those are witness cells, and a witness
-         * could put any digest there. Now the row has its own selector and its
-         * own rule, and the direction and sibling cells are not read on it.
+         * lanes, and nothing else. The row has its own selector and its own
+         * rule, and the direction and sibling cells are not read on it: there
+         * is no level above the last compression to inject.
          */
         let cp_bnd = if self.checkpoint_fixed() {
             periodic[self.cp_col()]

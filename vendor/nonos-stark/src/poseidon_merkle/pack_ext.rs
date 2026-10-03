@@ -18,7 +18,7 @@ pub fn pack_ext(v: Fp2) -> [Fp; RATE] {
 /// A fold always reads both, so committing them apart buys a second path per
 /// layer and nothing else. The pair fills the rate exactly, so the leaf costs
 /// what one value cost and the tree holds half the leaves: one path fewer to
-/// carry and one level less to walk. THREAT 6a.
+/// carry and one level less to walk.
 pub fn pack_pair_ext(a: Fp2, b: Fp2) -> [Fp; RATE] {
     [a.c0, a.c1, b.c0, b.c1]
 }

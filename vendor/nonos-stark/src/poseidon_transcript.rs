@@ -139,7 +139,7 @@ impl PoseidonTranscript {
     /// The proof-of-work search: the smallest nonce meeting the work. The
     /// keccak transcript has searched in parallel blocks since the grind
     /// became the dominant cost of an emit; this one did not, so every bit of
-    /// the inner's soundness was bought on one core of however many the box
+    /// the inner's soundness was bought on one core of however many the machine
     /// has. The parallel form searches a block across every core and takes
     /// the lowest hit in it, so it returns the identical nonce the serial
     /// loop would: bit-exact, and the proof does not move.

@@ -93,7 +93,7 @@ pub fn serialize_rounds_shared(
         fp2(&mut b, v);
     }
     // Format 7: the DEEP nonce, where the transcript absorbs it.
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     b.extend_from_slice(&rounds.pre.deep_nonce.to_le_bytes());
     for op in &rounds.pre.openings {
         for v in &op.row {
@@ -185,9 +185,9 @@ pub fn deserialize_rounds_shared(
         });
     }
     let periodic_z = r.fp2s()?;
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     let deep_nonce = r.u64()?;
-    #[cfg(not(feature = "v2"))]
+    #[cfg(not(feature = "fri8"))]
     let deep_nonce = 0u64;
     let n_periodic = periodic_z.len();
     if n_q.checked_mul(8 * n_periodic)? > r.remaining() {

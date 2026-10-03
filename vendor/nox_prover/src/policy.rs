@@ -1,6 +1,5 @@
 // NONOS Operating System (AGPL-3.0-or-later)
-//! The anonymity defaults a request must meet before anything is proved, the
-//! same rules the Zig wallet applies (`ocean/src/anon`).
+//! The anonymity defaults a request must meet before anything is proved.
 //!
 //! - A spend is submitted by someone else: it pays a nonzero fee to a named
 //!   `fee_recipient`. `"self_submit": true` opts out.
@@ -13,7 +12,7 @@
 //!   units for NOX (asset 1). `"any_amount": true` opts out.
 //!
 //! When a submission may go out and which address a withdrawal pays are the
-//! calling wallet's to decide; `ocean/ANONYMITY.md` says how. An opt-out is
+//! calling wallet's to decide. An opt-out is
 //! never silent: `check` returns it by name, and `prove` puts it in the
 //! proof's JSON.
 

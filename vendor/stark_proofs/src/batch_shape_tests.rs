@@ -83,3 +83,31 @@ fn print_the_outer_shape_by_batch_size() {
         );
     }
 }
+
+/// The full outer over a batch inner, proved at the settlement point: the
+/// first aggregation measurement, time and peak memory from the run. One size
+/// per process, from `NOX_BATCH` (default 2); the proof goes to
+/// `NOX_BATCH_OUT`, or the system temp directory.
+///
+///     NOX_BATCH=2 /usr/bin/time -v cargo test --release --features "parallel fri8" --lib \
+///         batch_shape_tests::prove_the_outer_over_a_batch -- --ignored --nocapture
+#[test]
+#[ignore = "release tier: proves a settlement outer over a batch, tens of GB"]
+fn prove_the_outer_over_a_batch() {
+    let n: usize = std::env::var("NOX_BATCH").ok().and_then(|v| v.parse().ok()).unwrap_or(2);
+    let out = std::env::var("NOX_BATCH_OUT")
+        .unwrap_or_else(|_| std::format!("{}/batch-{n}.proof", std::env::temp_dir().display()));
+    let h = hasher();
+    let t = Instant::now();
+    let mut js = batch_of(n);
+    let seed: [Fp; RATE] = core::array::from_fn(|i| Fp::from_u64(0xba7c + i as u64));
+    let blind = hide(&h, &mut js, &seed, NQ);
+    let inner = pack(&h, prove_raw(&h, js, NQ, GRIND, extra(), &blind), extra(), GRIND);
+    println!("batch {n}: inner proved in {:?}", t.elapsed());
+    let t = Instant::now();
+    let asm = assemble_over_wired(&h, inner, Tamper::None, usize::MAX, Point::emit_wiring());
+    println!("batch {n}: outer assembled in {:?}", t.elapsed());
+    let t = Instant::now();
+    let settled = crate::host::prove_outer(&h, asm, &out, None, crate::host::point_from_args(&[]));
+    println!("batch {n}: outer proved and verified in {:?}, {} bytes, {out}", t.elapsed(), settled.bytes);
+}

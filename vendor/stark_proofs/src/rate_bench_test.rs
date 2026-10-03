@@ -10,7 +10,7 @@
 //!
 //! The first run at an extra builds the full periodic tree and writes the
 //! cache; run it again to time the proof from the cache. The query grind is
-//! held at 8 bits because v2 buys it from a helper (docs/12 Section 2.2); the
+//! held at 8 bits because the `fri8` build buys it from a helper (docs/12 Section 2.2); the
 //! commit grind is the launch transcript's own.
 
 use crate::crypto::stark::air::{

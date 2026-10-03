@@ -28,14 +28,11 @@ pub mod settlement {
     pub const EXTRA_BLOWUP_BITS: u32 = 6;
 }
 
-/// The launch point: a spend proved directly for the chain, no outer. 19
-/// queries at rate 1/64 with a 28-bit grind before the query draw and 20 bits
-/// before each folding challenge (`fri_ext::COMMIT_GRIND_BITS`). Round by
-/// round that is 80.8 bits for the query draw and 80.3 for the first fold,
-/// and for the DEEP batching challenge, which nothing grinds before, 80.0
-/// under the 2025 proximity gaps (a preprint) and 54.4 under those of 2020:
-/// the provable figure either way, docs/12-soundness.md Section 1. About 113 KB and 2.9 GB, inside every
-/// ceiling at once, a browser's 4 GB address space included.
+/// Point A: a spend proved directly for the chain. 19 queries at rate 1/64
+/// with a 28-bit grind before the query draw; on the deployed transcript a
+/// 19-bit grind before the DEEP draw and 21 bits before each folding challenge
+/// (`fri_ext`). Round by round that is 80.8 bits for the query draw and 80.1
+/// provable, docs/12-soundness.md Section 2.
 pub mod direct {
     /// FRI queries drawn.
     pub const N_QUERIES: usize = 19;
@@ -102,10 +99,8 @@ mod tests {
         assert_eq!(provable_bits(q, g, b), 81);
     }
 
-    /// The launch point is 19 / 28 / 5. Its query phase alone is 85 by the
-    /// halved count; round by round it is set by the DEEP batching challenge,
-    /// 80.0 or 54.4 by which proximity gaps theorem, docs/12-soundness.md
-    /// Section 1.
+    /// Point A is 19 / 28 / 5. Its query phase alone is 85 by the halved
+    /// count; round by round it is 80.1, docs/12-soundness.md Section 2.
     #[test]
     fn the_direct_point_is_the_launch_point() {
         let (q, g, b) = (direct::N_QUERIES, direct::GRIND_BITS, direct::EXTRA_BLOWUP_BITS);

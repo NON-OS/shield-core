@@ -1,8 +1,7 @@
 // NONOS Operating System (AGPL-3.0-or-later)
 //! Prove a transfer from a witness a wallet wrote.
 //!
-//! This is the end of THREAT 5. The wallet builds a spend and writes it with
-//! `ocean/src/witness.zig`; this reads those words, rebuilds the transfer,
+//! The wallet builds a spend and writes it as witness words; this reads them, rebuilds the transfer,
 //! proves it at the transfer point in two Poseidon rounds, and verifies the
 //! proof back from its own bytes against a circuit rebuilt from the statement.
 //!

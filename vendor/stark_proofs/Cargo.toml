@@ -19,12 +19,15 @@ nonos-stark = { path = "../nonos-stark" }
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
 
 [features]
-parallel = ["nonos-stark/parallel"]
+default = ["std"]
+# The host modules: files, clocks, threads and the request reader. Without it the
+# crate is no_std + alloc, the prove path the nonos.prove capsule runs.
+std = []
+parallel = ["std", "nonos-stark/parallel"]
 kat = ["nonos-stark/kat"]
 digest32 = ["nonos-stark/digest32"]
 radix8 = ["nonos-stark/radix8"]
-launch_v1 = ["nonos-stark/launch_v1"]
-v2 = ["nonos-stark/v2", "radix8", "digest32"]
-not_before = ["v2"]
+fri8 = ["nonos-stark/fri8", "radix8", "digest32"]
+not_before = ["fri8"]
 # The claim statement: the transfer plus the inputs' two limb sums, words 36 and 37.
-claim = ["v2"]
+claim = ["fri8"]

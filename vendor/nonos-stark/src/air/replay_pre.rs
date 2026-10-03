@@ -106,12 +106,12 @@ pub fn draw_deep_coeffs(ts: &mut Transcript, n: usize, lanes: usize) -> Vec<Fp2>
 
 /// The DEEP round as the prover runs it. v1: the coefficients as
 /// `draw_deep_coeffs` draws them, and a zero nonce that never reaches the wire.
-/// v2 on the launch transcript (docs/17 steps 8 and 9): a `DEEP_GRIND_BITS`
+/// On the format 7 transcript (docs/17 steps 8 and 9): a `DEEP_GRIND_BITS`
 /// grind, its nonce absorbed, then `n` independent coefficients from the exact
 /// stream under 0x09. Independent coefficients make the batch an affine space,
 /// one line's error, which the grind lifts past 80 bits.
 pub fn draw_deep_coeffs_ground(ts: &mut Transcript, n: usize, lanes: usize) -> (Vec<Fp2>, u64) {
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     if lanes == 2 {
         let nonce = ts.grind(super::super::fri_ext::DEEP_GRIND_BITS);
         return (ts.stream_fp2(0x09, n), nonce);
@@ -119,7 +119,7 @@ pub fn draw_deep_coeffs_ground(ts: &mut Transcript, n: usize, lanes: usize) -> (
     (draw_deep_coeffs(ts, n, lanes), 0)
 }
 
-/// The DEEP round as a verifier replays it: on v2 the nonce must meet the
+/// The DEEP round as a verifier replays it: on the format 7 transcript the nonce must meet the
 /// grind, bound where the prover bound it, before the stream is drawn. `None`
 /// when it does not. On v1 the nonce is not part of the proof and is ignored.
 pub fn draw_deep_coeffs_checked(
@@ -128,7 +128,7 @@ pub fn draw_deep_coeffs_checked(
     lanes: usize,
     nonce: u64,
 ) -> Option<Vec<Fp2>> {
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     if lanes == 2 {
         if !ts.verify_pow(nonce, super::super::fri_ext::DEEP_GRIND_BITS) {
             return None;

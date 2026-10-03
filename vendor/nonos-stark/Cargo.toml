@@ -21,15 +21,12 @@ blake3 = { version = "1.0", default-features = false, features = ["pure"] }
 parallel = ["dep:rayon"]
 # Records every transcript operation for a known-answer vector. Tooling only.
 kat = []
-# Keep all 32 bytes of every Merkle digest (v2). A different build, roots and
+# Keep all 32 bytes of every Merkle digest. A different build, roots and
 # parameter identity: see `merkle::DIGEST_BYTES`.
 digest32 = []
-# Fold eight values a layer (v2). A different build: see `fri::FRI_FOLD_LOG`.
+# Fold eight values a layer. A different build: see `fri::FRI_FOLD_LOG`.
 radix8 = []
-# The live launch circuit without the checkpoint rule, for its pinned vectors
-# only. Never for a new image.
-launch_v1 = []
-# The v2 transcript (docs/17): exact draws, vector absorbs, the DEEP grind and
+# The format 7 transcript (docs/17): exact draws, vector absorbs, the DEEP grind and
 # independent DEEP coefficients, the query shape, radix 8, 32-byte digests and
 # the periodic overlay. A different build, parameter identity and wire format.
-v2 = ["radix8", "digest32"]
+fri8 = ["radix8", "digest32"]

@@ -38,35 +38,34 @@ use stark_proofs::shield::member::TREE_DEPTH;
 use stark_proofs::shield_params::direct;
 use stark_proofs::zk_rank::check_fri_rank;
 
-/// The launch circuit's periodic root, the 24 bytes every verifier holds. A
-/// cache whose root is anything else is refused before it is used.
-#[cfg(all(feature = "launch_v1", not(feature = "digest32")))]
-pub const PERIODIC_ROOT: [u8; DIGEST_BYTES] = [
-    0xbb, 0x76, 0x14, 0x93, 0x7a, 0xe6, 0xd7, 0xe5, 0xe2, 0x6e, 0x88, 0x61, 0x0f, 0xae, 0x8f, 0xf9,
-    0xe5, 0x19, 0x5f, 0xef, 0x47, 0x21, 0xfd, 0xbd,
-];
-
-/// The v1.1 circuit's periodic root: the launch program with the checkpoint
-/// rule. Its periodic tree carries one selector column more per membership and
-/// chain kind, so the root moves.
-#[cfg(all(not(feature = "launch_v1"), not(feature = "digest32")))]
-pub const PERIODIC_ROOT: [u8; DIGEST_BYTES] = [
+/// The periodic root of the radix-4, 24-byte-digest build: what a verifier of
+/// that build holds.
+const ROOT_24: [u8; 24] = [
     0x76, 0x10, 0xe7, 0x59, 0x93, 0xc1, 0xde, 0x7b, 0x8d, 0xa0, 0x7a, 0x5c, 0xa6, 0x92, 0x0f, 0x0e,
     0x66, 0xcd, 0xb8, 0x8d, 0x6a, 0x43, 0x3e, 0x23,
 ];
 
-/// The v2 circuit's periodic root (spec/v2/MANIFEST.md): overlay, checkpoint
-/// rule, 32-byte digests, radix 8.
-#[cfg(all(feature = "digest32", feature = "v2"))]
-pub const PERIODIC_ROOT: [u8; DIGEST_BYTES] = [
+/// The deployed circuit's periodic root (spec/transfer/MANIFEST.md): overlay,
+/// checkpoint rule, 32-byte digests, radix 8.
+const ROOT_32: [u8; 32] = [
     0x89, 0x8b, 0x80, 0x0f, 0x60, 0xf4, 0x67, 0xf0, 0x4a, 0xc9, 0x14, 0x0f, 0xb4, 0x25, 0xcd, 0x54,
     0x18, 0x1e, 0x4d, 0x16, 0x42, 0xf6, 0x1f, 0xc3, 0x8b, 0x59, 0x65, 0xd0, 0x8a, 0xce, 0x28, 0x88,
 ];
 
-/// 32-byte digests without the v2 circuit is no shipped circuit: no cache has
-/// an all-zero root, so every cache is refused. Fail closed, not open.
-#[cfg(all(feature = "digest32", not(feature = "v2")))]
-pub const PERIODIC_ROOT: [u8; DIGEST_BYTES] = [0u8; DIGEST_BYTES];
+/// The periodic root a cache must carry, chosen by the digest width the engine
+/// was built with, so a workspace build that unifies the engine's features
+/// still pins the root of the width it hashes at. A cache whose root is
+/// anything else is refused before use.
+pub const PERIODIC_ROOT: [u8; DIGEST_BYTES] = {
+    let src: &[u8] = if DIGEST_BYTES == 24 { &ROOT_24 } else { &ROOT_32 };
+    let mut out = [0u8; DIGEST_BYTES];
+    let mut i = 0;
+    while i < DIGEST_BYTES {
+        out[i] = src[i];
+        i += 1;
+    }
+    out
+};
 
 /// Why a proof was not made or not accepted. Every refusal is one of these;
 /// nothing in this crate panics on its input.
@@ -189,9 +188,14 @@ impl Options<'_> {
     }
 }
 
-/// A cache from bytes, refused unless its root is the launch circuit's.
+/// A cache from bytes, refused unless every stored level hashes up to the
+/// launch circuit's periodic root at the prover's cut. Any refusal is
+/// `Error::Cache`, so a wallet rebuilds rather than failing every proof.
 pub fn load_cache(bytes: &[u8]) -> Result<TreeTop, Error> {
     let top = TreeTop::from_bytes(bytes).ok_or_else(|| Error::Cache("malformed".into()))?;
+    if top.chunk() != 1usize << PERIODIC_CUT {
+        return Err(Error::Cache("its cut is not the prover's".into()));
+    }
     if top.root()[..DIGEST_BYTES] != PERIODIC_ROOT {
         return Err(Error::Cache(
             "its root is not the launch circuit's periodic root".into(),
@@ -240,26 +244,26 @@ fn statement(publics: &[u64]) -> Result<(Vec<Fp>, WiredMultiGen, ParamSet), Erro
 }
 
 /// The query point a proof's header names. On v1 there is one, the launch
-/// point. On v2 the header's parameter identity must be one of the accepted
+/// point. On the format 7 transcript the header's parameter identity must be one of the accepted
 /// shapes' identities over this statement's circuit; the shape's query count
 /// and grind are then this verifier's own constants for that identity, never
 /// numbers read from the proof.
 fn point_of(proof: &[u8], publics: &[u64]) -> Result<(usize, u32), Error> {
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     {
         let (_, air, _) = statement(publics)?;
         let h = stark_proofs::proof_wire::read_header(proof)
             .ok_or_else(|| Error::NotVerified("no header".into()))?;
-        for (_, q, g) in stark_proofs::crypto::stark::fri_ext::V2_SHAPES {
+        for (_, q, g) in stark_proofs::crypto::stark::fri_ext::QUERY_SHAPES {
             if ParamSet::of(&air, q, g, direct::EXTRA_BLOWUP_BITS).id() == h.params {
                 return Ok((q, g));
             }
         }
         Err(Error::NotVerified(
-            "the header names no accepted v2 shape".into(),
+            "the header names no accepted shape".into(),
         ))
     }
-    #[cfg(not(feature = "v2"))]
+    #[cfg(not(feature = "fri8"))]
     {
         let _ = (proof, publics);
         Ok((direct::N_QUERIES, direct::GRIND_BITS))

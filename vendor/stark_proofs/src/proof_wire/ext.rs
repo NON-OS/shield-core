@@ -27,8 +27,8 @@ pub fn serialize_pre(pre: &StarkProofExtPre) -> Vec<u8> {
         b.extend_from_slice(&v.c0.value().to_le_bytes());
         b.extend_from_slice(&v.c1.value().to_le_bytes());
     }
-    // v2: the DEEP nonce after the claims, where the transcript absorbs it.
-    #[cfg(feature = "v2")]
+    // The DEEP nonce after the claims, where the transcript absorbs it.
+    #[cfg(feature = "fri8")]
     b.extend_from_slice(&pre.deep_nonce.to_le_bytes());
     for op in &pre.openings {
         for v in &op.row {

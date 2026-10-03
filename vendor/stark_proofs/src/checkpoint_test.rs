@@ -3,15 +3,13 @@
 //!
 //! A checkpoint is the row a region's last compression writes: its rate lanes
 //! are the digest the path or chain reached, and a root or output pin reads
-//! them. It used to be a slot injection, which read a witnessed direction and
-//! sibling of a level that does not exist, bound only by the direction being a
-//! bit. `checkpoint_fixed` gives the row its own selector: the successor holds
-//! the compression's output in lanes 0 to 3 and zero in lanes 4 to 7, and the
-//! direction and sibling cells are forced to zero.
+//! them. The row has its own selector: the successor holds the compression's
+//! output in lanes 0 to 3 and zero in lanes 4 to 7, and the direction and
+//! sibling cells are forced to zero.
 //!
 //! The rows come from the circuit's own selectors, per kind, so the test holds
 //! whatever row the rule actually selects. Kinds 1, 2, 4 and 5 are the
-//! membership kinds of the launch join-split, and the test pins that too.
+//! membership kinds of the join-split, and the test pins that too.
 
 use crate::crypto::stark::air::{Air, ShieldRegion};
 use crate::crypto::stark::field::Fp;
@@ -58,10 +56,8 @@ fn membership_kinds(js: &JoinSplit) -> Vec<usize> {
     out
 }
 
-/// Every row a membership kind's rule treats as its checkpoint. The fixed
-/// circuit selects it with the kind's last periodic slot. The launch circuit
-/// has no such slot: there the checkpoint is the slot boundary whose successor
-/// the honest walk leaves with an empty capacity.
+/// Every row a membership kind's rule treats as its checkpoint, selected by
+/// the kind's last periodic slot.
 fn checkpoint_rows(js: &JoinSplit) -> Vec<(usize, usize)> {
     let cols = js.wired.periodic_columns();
     let map = js.wired.wired().kind_map();
@@ -73,12 +69,7 @@ fn checkpoint_rows(js: &JoinSplit) -> Vec<(usize, usize)> {
             if cols[k][r] != Fp::ONE {
                 continue;
             }
-            let hit = if cfg!(feature = "launch_v1") {
-                cols[first + WIDTH][r] == Fp::ONE
-                    && (RATE..WIDTH).all(|j| js.witness[(r + 1) * w + j] == Fp::ZERO)
-            } else {
-                cols[first + slots - 1][r] == Fp::ONE
-            };
+            let hit = cols[first + slots - 1][r] == Fp::ONE;
             if hit {
                 out.push((k, r));
             }
@@ -135,8 +126,7 @@ fn the_membership_kinds_are_one_two_four_and_five() {
 /// on the checkpoint row itself, changed alone: state, direction, sibling and
 /// the split squares. The columns past them are the bottom-direction pin, read
 /// on an opening's first row only, and the overlay width of other kinds. The
-/// fixed rule refuses every change; the launch rule leaves the checkpoint row's
-/// direction and sibling unread.
+/// rule refuses every change.
 #[test]
 fn every_checkpoint_cell_changed_alone_is_refused() {
     let js = balanced_deployed(Break::None);
@@ -164,13 +154,7 @@ fn every_checkpoint_cell_changed_alone_is_refused() {
         "checkpoint cells checked {checked}, left free {}",
         free.len()
     );
-    #[cfg(not(feature = "launch_v1"))]
     assert!(free.is_empty(), "checkpoint cells left free: {free:?}");
-    #[cfg(feature = "launch_v1")]
-    assert!(
-        !free.is_empty(),
-        "the launch rule should leave the checkpoint direction unread"
-    );
 }
 
 /// A checkpoint that shows a digest its walk never reached, on every
@@ -178,10 +162,9 @@ fn every_checkpoint_cell_changed_alone_is_refused() {
 /// is changed so the walk reaches a wrong digest and the checkpoint is made to
 /// show the true one: a wrong path under the true root. Where the opening is a
 /// single compression, the checkpoint is made to show a chosen digest, which
-/// the output binding on the next row refuses in both circuits. Either way the
-/// injection row is given direction one and the digest to show as its sibling,
-/// and the region is re-filled so every other transition holds. The launch
-/// rule accepts every wrong path; the fixed rule refuses everything.
+/// the output binding on the next row refuses. Either way the injection row is
+/// given direction one and the digest to show as its sibling, and the region
+/// is re-filled so every other transition holds. The rule refuses everything.
 #[test]
 fn a_checkpoint_showing_an_unwalked_digest_is_refused() {
     let js = balanced_deployed(Break::None);
@@ -232,8 +215,6 @@ fn a_checkpoint_showing_an_unwalked_digest_is_refused() {
             t[r * w + WIDTH + 1 + c] = shown[c];
         }
         refill(air, &mut t, &per, r, last_live);
-        #[cfg(feature = "launch_v1")]
-        assert_eq!(t[(r + 1) * w..(r + 1) * w + RATE], shown[..]);
         if violations(air, &t, 1).is_empty() {
             accepted.push((k, r));
         }
@@ -243,16 +224,9 @@ fn a_checkpoint_showing_an_unwalked_digest_is_refused() {
         rows.len(),
         accepted.len()
     );
-    #[cfg(not(feature = "launch_v1"))]
     assert!(
         accepted.is_empty(),
         "unwalked digests accepted at {accepted:?}"
-    );
-    #[cfg(feature = "launch_v1")]
-    assert_eq!(
-        accepted.len(),
-        below,
-        "the launch rule accepts every wrong path"
     );
     assert!(below >= 4, "too few checkpoints have a sibling below them");
 }

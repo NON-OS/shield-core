@@ -33,14 +33,7 @@ fn seed() -> [Fp; RATE] {
 /// the witness is deterministic, and a diagnose loop that re-proves it every
 /// iteration turns minutes of thinking into half-hours of waiting.
 pub fn shield_join_split(h: &Poseidon) -> Inner<WiredMultiGen> {
-    static PROOF: std::sync::OnceLock<StarkProofExtPRounds> = std::sync::OnceLock::new();
-    let proof = PROOF
-        .get_or_init(|| {
-            let mut js = balanced_deployed(Break::None);
-            let blind = hide(h, &mut js, &seed(), NQ);
-            prove_raw(h, js, NQ, GRIND, extra(), &blind).proof
-        })
-        .clone();
+    let proof = memoized(h);
     // The AIR is rebuilt rather than cached, so it draws the challenges the
     // proof was made against the way a verifier does.
     let js = balanced_deployed(Break::None);
@@ -96,4 +89,22 @@ pub fn shield_join_split_at(
     extra_bits: u32,
 ) -> Inner<WiredMultiGen> {
     prove(h, balanced_deployed(Break::None), nq, grind, extra_bits, &[])
+}
+
+#[cfg(feature = "std")]
+fn memoized(h: &Poseidon) -> StarkProofExtPRounds {
+    static PROOF: std::sync::OnceLock<StarkProofExtPRounds> = std::sync::OnceLock::new();
+    PROOF.get_or_init(|| deployed_proof(h)).clone()
+}
+
+/// Without std there is no process-wide cell to keep it in: proved per call.
+#[cfg(not(feature = "std"))]
+fn memoized(h: &Poseidon) -> StarkProofExtPRounds {
+    deployed_proof(h)
+}
+
+fn deployed_proof(h: &Poseidon) -> StarkProofExtPRounds {
+    let mut js = balanced_deployed(Break::None);
+    let blind = hide(h, &mut js, &seed(), NQ);
+    prove_raw(h, js, NQ, GRIND, extra(), &blind).proof
 }

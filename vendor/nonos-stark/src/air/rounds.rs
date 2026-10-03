@@ -10,9 +10,9 @@
 //! challenges are drawn from that root, and only then are the permutation
 //! columns filled and committed.
 //!
-//! `wired_challenge_tests` and `wired_forgery_tests` are why this exists. With
-//! the challenges fixed in the circuit, the real settlement outer accepts a
-//! witness in which two cells it says are equal are not.
+//! A challenge fixed in the circuit would let a prover choose a trace in which
+//! two cells it says are equal are not; drawing it after the commitment is what
+//! makes the product an argument.
 
 use super::super::field::{Fp, Fp2};
 

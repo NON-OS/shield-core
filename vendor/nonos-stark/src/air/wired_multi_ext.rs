@@ -318,7 +318,7 @@ impl WiredMultiExt {
     /// (`Stack::overlay`), and move the wiring's periodic columns down to
     /// follow them. A different circuit from the stacked one: its periodic
     /// root and parameter identity differ, and nothing built without this
-    /// changes. For v2.
+    /// changes. For the `fri8` build.
     pub fn overlay_periodic(&mut self) {
         self.stack.overlay();
         let base = self.stack.n_kinds + self.stack.region_slots();

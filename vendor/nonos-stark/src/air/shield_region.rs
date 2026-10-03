@@ -7,6 +7,7 @@
 //! types keeps that dispatch typed: no downcasting, and a region type outside
 //! this list cannot silently lose its in-circuit recomputation.
 
+use super::activity_count::ActivityCount;
 use super::index_scalar::IndexScalar;
 use super::live_gate::LiveGate;
 use super::multi_membership::MultiMembership;
@@ -33,6 +34,8 @@ pub enum ShieldRegion {
     Live(LiveGate),
     /// The balance region's limbs, rooms and carry, each below its bound.
     Range(LimbRange),
+    /// The activity statement's count of distinct live spends.
+    Count(ActivityCount),
 }
 
 impl ShieldRegion {
@@ -45,6 +48,7 @@ impl ShieldRegion {
             ShieldRegion::Publics(r) => Box::new(r.clone()),
             ShieldRegion::Live(r) => Box::new(r.clone()),
             ShieldRegion::Range(r) => Box::new(r.clone()),
+            ShieldRegion::Count(r) => Box::new(r.clone()),
         }
     }
 
@@ -57,6 +61,7 @@ impl ShieldRegion {
             ShieldRegion::Publics(r) => r,
             ShieldRegion::Live(r) => r,
             ShieldRegion::Range(r) => r,
+            ShieldRegion::Count(r) => r,
         }
     }
 
@@ -69,6 +74,7 @@ impl ShieldRegion {
             ShieldRegion::Publics(r) => r.transition_gen(window, periodic),
             ShieldRegion::Live(r) => r.transition_gen(window, periodic),
             ShieldRegion::Range(r) => r.transition_gen(window, periodic),
+            ShieldRegion::Count(r) => r.transition_gen(window, periodic),
         }
     }
 }

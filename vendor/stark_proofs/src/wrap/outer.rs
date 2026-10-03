@@ -1,7 +1,7 @@
 // NONOS Operating System (AGPL-3.0-or-later)
 
 //! The settlement outer as the wrap's inner: assembled by name, proved under
-//! Poseidon, packed. Proving it is most of an hour on the box and the proof
+//! Poseidon, packed. Proving it is most of an hour on a large server and the proof
 //! is the same every time, so a directory can hold it: named, the proof is
 //! read back and verified against the circuit as it now is; absent, empty,
 //! or made under an earlier transcript, it is proved and stored there.

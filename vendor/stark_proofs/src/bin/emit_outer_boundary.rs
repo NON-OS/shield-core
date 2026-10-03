@@ -4,7 +4,7 @@
 //! The structure emit already carries these, but that run also commits the
 //! outer periodic tree at the deployment rate, which is two thousand six
 //! hundred and forty nine columns of Keccak and took three hours and thirty
-//! eight minutes on the box. The boundary list does not depend on that tree in
+//! eight minutes on a large server. The boundary list does not depend on that tree in
 //! any way, so waiting for it is waiting for nothing.
 //!
 //! This assembles the outer and stops. The assembly itself is minutes rather

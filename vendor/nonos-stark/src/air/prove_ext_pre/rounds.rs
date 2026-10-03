@@ -8,9 +8,8 @@
 //! walk over a trace that now has two roots.
 //!
 //! This is the whole difference between a copy constraint that is argued and
-//! one that is asserted. With the challenges fixed in the circuit the real
-//! settlement outer accepts a witness in which two cells it says are equal are
-//! not, which `wired_forgery_tests` builds.
+//! one that is asserted: with the challenges fixed in the circuit, a prover
+//! could choose a trace in which two cells it says are equal are not.
 
 use super::super::super::field::Fp;
 use super::super::super::fri_ext::fri_prove_ext_layer_zero_ground;

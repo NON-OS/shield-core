@@ -38,7 +38,11 @@ fn the_weekly_spend_tree_matches_the_pools_hasher() {
     for leaf in LEAVES {
         tree.insert(digest(leaf));
     }
-    assert_eq!(tree.root(), digest(ROOT), "the prover's tree and the pool's hasher disagree");
+    assert_eq!(
+        tree.root(),
+        digest(ROOT),
+        "the prover's tree and the pool's hasher disagree"
+    );
 }
 
 /// Each leaf's sixteen-step path, walked with the compression alone, reaches
@@ -56,8 +60,42 @@ fn each_leaf_walks_to_the_root() {
         assert_eq!(siblings.len(), DEPTH);
         let mut node = digest(leaf);
         for (sib, is_right) in siblings.iter().zip(right) {
-            node = if is_right { h.compress(sib, &node) } else { h.compress(&node, sib) };
+            node = if is_right {
+                h.compress(sib, &node)
+            } else {
+                h.compress(&node, sib)
+            };
         }
         assert_eq!(node, digest(ROOT), "leaf {i} does not walk to the root");
     }
+}
+
+/// The larger known answer: every spend of the launch pool between blocks
+/// 11,680,381 and 11,820,380, 170 nullifiers, folded at depth 16. The leaves
+/// were read from the chain with one provider and the root computed with the
+/// pool's hasher by the tree's builder; this folds them with the prover's
+/// Poseidon. 170 leaves reach the frontier and the zero subtrees at every
+/// level, which two leaves do not.
+#[test]
+fn the_launch_pools_170_spends_fold_to_the_published_root() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/d9/launch-170.json");
+    let text = std::fs::read_to_string(path).expect("spec/d9/launch-170.json");
+    let at = text.find("\"nullifiers\"").expect("the nullifier list");
+    let leaves: Vec<&str> = text[at..]
+        .split('"')
+        .filter(|t| t.starts_with("0x") && t.len() == 66)
+        .collect();
+    assert_eq!(leaves.len(), 170);
+    let root_at = text.find("\"root\": \"").expect("the root") + 9;
+    let root = &text[root_at..root_at + 66];
+
+    let mut tree = PoolTree::with_depth(hasher(), DEPTH);
+    for leaf in &leaves {
+        tree.insert(digest(leaf));
+    }
+    assert_eq!(
+        tree.root(),
+        digest(root),
+        "the prover's tree and the pool's hasher disagree at 170 leaves"
+    );
 }

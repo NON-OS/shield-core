@@ -15,8 +15,12 @@
 //! these words is a walk from this leaf to this root and nothing else.
 
 use super::native::hasher;
-use super::{DEPTH, DIGEST, KIND, LEAF_DOMAIN, LOG_ROUNDS, LOG_TRACE, MASK_COLUMNS, PAD_LOG, ROOT, WORDS};
-use crate::crypto::stark::air::{Air, MultiMembership, Opening, Publics, ShieldRegion, WiredMultiGen, RATE};
+use super::{
+    DEPTH, DIGEST, KIND, LEAF_DOMAIN, LOG_ROUNDS, LOG_TRACE, MASK_COLUMNS, PAD_LOG, ROOT, WORDS,
+};
+use crate::crypto::stark::air::{
+    Air, MultiMembership, Opening, Publics, ShieldRegion, WiredMultiGen, RATE,
+};
 use crate::crypto::stark::field::Fp;
 use crate::shield::wire::offsets;
 use crate::shield::wire_class::{tie, Class};
@@ -43,20 +47,31 @@ pub(super) struct Built {
 /*
  * The circuit for `words`. With a witness it is the prover's; without, the
  * verifier's shape, whose constraints, wiring and periodic columns depend on
- * nothing but the statement's length. `digest` is the witness's copy of the
- * statement's digest words and kind, so a test can write what a forger would;
- * the honest prover passes the statement's own.
+ * nothing but the statement's length. `leaf_lanes` is what the witness
+ * writes into the leaf's digest and kind lanes, so a test can write what a
+ * forger would; the honest prover passes `None`, the statement's own words.
  */
-pub(super) fn build(words: &[Fp], w: Option<&Witness>, leaf_lanes: Option<[Fp; 5]>) -> Option<Built> {
+pub(super) fn build(
+    words: &[Fp],
+    w: Option<&Witness>,
+    leaf_lanes: Option<[Fp; 5]>,
+) -> Option<Built> {
     if words.len() != WORDS {
         return None;
     }
     let z = Fp::ZERO;
     let dom = Fp::from_u64(LEAF_DOMAIN);
-    let [d0, d1, d2, d3, k] =
-        leaf_lanes.unwrap_or([words[DIGEST], words[DIGEST + 1], words[DIGEST + 2], words[DIGEST + 3], words[KIND]]);
+    let [d0, d1, d2, d3, k] = leaf_lanes.unwrap_or([
+        words[DIGEST],
+        words[DIGEST + 1],
+        words[DIGEST + 2],
+        words[DIGEST + 3],
+        words[KIND],
+    ]);
     let (siblings, right) = match w {
-        Some(w) if w.siblings.len() == DEPTH && w.right.len() == DEPTH => (w.siblings.clone(), w.right.clone()),
+        Some(w) if w.siblings.len() == DEPTH && w.right.len() == DEPTH => {
+            (w.siblings.clone(), w.right.clone())
+        }
         Some(_) => return None,
         None => (vec![[z; RATE]; DEPTH], vec![false; DEPTH]),
     };
@@ -78,8 +93,12 @@ pub(super) fn build(words: &[Fp], w: Option<&Witness>, leaf_lanes: Option<[Fp; 5
         siblings: sibs,
         directions: dirs,
     };
-    let pins = vec![(0, 0, dom), (6, 0, z), (7, 0, z)];
-    let slot = MultiMembership::new_witness_bound(hasher(), LOG_ROUNDS, vec![opening], pins).with_split();
+    let bound: Vec<(usize, usize, Fp)> = pins()
+        .iter()
+        .map(|&(lane, v)| (lane, 0, Fp::from_u64(v)))
+        .collect();
+    let slot =
+        MultiMembership::new_witness_bound(hasher(), LOG_ROUNDS, vec![opening], bound).with_split();
 
     let publics = Publics {
         log_t: 4,
@@ -93,16 +112,10 @@ pub(super) fn build(words: &[Fp], w: Option<&Witness>, leaf_lanes: Option<[Fp; 5
     let rows = vec![Air::rows(&slot), Air::rows(&publics), Air::rows(&pad)];
     let (off, span) = offsets(&rows);
 
-    let word = |k: usize| (off[PUBLICS] + k, 0);
-    let checkpoint = off[SLOT] + (1 + DEPTH) * ROUNDS;
-    let mut classes: Vec<Class> = Vec::with_capacity(WORDS);
-    for c in 0..RATE {
-        classes.push(tie(&[word(ROOT + c), (checkpoint, c)]));
-    }
-    for c in 0..RATE {
-        classes.push(tie(&[word(DIGEST + c), (off[SLOT], 1 + c)]));
-    }
-    classes.push(tie(&[word(KIND), (off[SLOT], 5)]));
+    let classes: Vec<Class> = wires()
+        .iter()
+        .map(|&(k, row, lane)| tie(&[(off[PUBLICS] + k, 0), (off[SLOT] + row, lane)]))
+        .collect();
     let groups = packed_groups(span, &classes, CAP);
     if !groups_enforce(&groups, &classes) {
         return None;
@@ -122,6 +135,28 @@ pub(super) fn build(words: &[Fp], w: Option<&Witness>, leaf_lanes: Option<[Fp; 5
         return None;
     }
     Some(Built { wired, traces })
+}
+
+/// The row of the slot region whose lanes 0 to 3 hold the walked root: the
+/// checkpoint's successor, after the leaf's compression and `DEPTH` more.
+pub(crate) const CHECKPOINT_ROW: usize = (1 + DEPTH) * ROUNDS;
+
+/// Where each statement word is wired, as `(word, row of the slot, lane)`:
+/// the root to the checkpoint's lanes 0 to 3, the digest to row 0's lanes 1
+/// to 4, the kind to row 0's lane 5. `lean/Shield/Attest.lean` states the same
+/// table, and `attest::test` holds the two equal.
+pub(crate) fn wires() -> [(usize, usize, usize); WORDS] {
+    core::array::from_fn(|k| match k {
+        k if k < DIGEST => (k, CHECKPOINT_ROW, k - ROOT),
+        k if k < KIND => (k, 0, 1 + (k - DIGEST)),
+        _ => (KIND, 0, 5),
+    })
+}
+
+/// The constant pins of row 0, `(lane, value)`: the leaf domain, and zero in
+/// the two lanes the leaf's second half leaves empty.
+pub(crate) fn pins() -> [(usize, u64); 3] {
+    [(0, LEAF_DOMAIN), (6, 0), (7, 0)]
 }
 
 /// The verifier's circuit for a statement's words.

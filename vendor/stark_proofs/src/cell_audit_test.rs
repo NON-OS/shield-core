@@ -12,8 +12,7 @@
 //!   successor window belongs to nobody;
 //! - inside a live region: named column by column, and each needs a reason.
 //!
-//! Measured on the fixed circuit: 1,014 unread of 2,156, all free by design.
-//! The launch circuit had 1,114; the checkpoint rule closed the other 100.
+//! Measured: 1,014 unread of 2,156, all free by design.
 //! The counts and the list of cells inside live regions are pinned, so a new
 //! unread cell fails here until someone gives it a reason.
 //!
@@ -21,13 +20,11 @@
 //! cells of the trace, with a local check: a change at row r can only be seen
 //! by the windows at r - 1 and r and by the boundaries on that cell. Every free
 //! cell must fall under one named rule, and the counts are pinned to the
-//! contracts lane's coverage map of the same circuit.
+//! the contracts repository's coverage map of the same circuit.
 //!
 //! A cell the copy wiring binds is not free: `violations` checks the grand
 //! product's transitions and closure, so moving a wired cell is refused. A cell
 //! the permutation fixes cancels out of the product and is correctly free.
-
-#![cfg(not(feature = "launch_v1"))]
 
 use crate::crypto::stark::air::{Air, ShieldRegion};
 use crate::crypto::stark::field::Fp;
@@ -118,6 +115,7 @@ fn every_unread_edge_cell_is_classified() {
             ShieldRegion::Publics(_) => "publics",
             ShieldRegion::Live(_) => "live",
             ShieldRegion::Range(_) => "range",
+            ShieldRegion::Count(_) => "count",
         };
         println!("kind {k} at {s}: {name}, width {}", map[*k].4);
     }
@@ -208,10 +206,35 @@ fn rule_for(
     }
 }
 
-#[test]
-fn every_free_cell_in_the_trace_has_a_rule() {
-    let js = balanced_deployed(Break::None);
-    let air = &js.wired;
+/// What the full-trace audit found: the trace's size, the cells no window
+/// and no boundary sees, each rule's count, and any free cell no rule names.
+pub(crate) struct Audit {
+    pub cells: usize,
+    pub free: usize,
+    pub by_rule: BTreeMap<&'static str, usize>,
+    pub unexplained: Vec<(usize, usize)>,
+}
+
+impl Audit {
+    /// Free cells under the rules of one class: `a` is outside every
+    /// constraint by layout, `b` inside a region and free by name.
+    pub fn class(&self, prefix: char) -> usize {
+        self.by_rule
+            .iter()
+            .filter(|(k, _)| k.starts_with(prefix))
+            .map(|(_, v)| v)
+            .sum()
+    }
+}
+
+/// Change every cell of a satisfying witness by one, alone, and record the
+/// ones no window and no boundary sees, each sorted under the rule that says
+/// why it is free. A change at row r is seen only by the windows at r - 1 and
+/// r and by a boundary on that cell, so the check is local.
+pub(crate) fn audit_free_cells(
+    air: &crate::crypto::stark::air::WiredMultiGen,
+    witness: &[Fp],
+) -> Audit {
     let wm = air.wired();
     let (w, ws) = (air.trace_width(), air.window_size());
     let n = 1usize << air.log_trace_len();
@@ -260,7 +283,7 @@ fn every_free_cell_in_the_trace_has_a_rule() {
             .all(|v| *v == Fp::ZERO)
     };
     let free: Vec<Vec<usize>> = crate::crypto::stark::par::map_index(n, |r| {
-        let mut t = js.witness.clone();
+        let mut t = witness.to_vec();
         let mut out = Vec::new();
         for c in 0..w {
             let old = t[r * w + c];
@@ -276,7 +299,7 @@ fn every_free_cell_in_the_trace_has_a_rule() {
         out
     });
 
-    let mut by_rule: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut by_rule: BTreeMap<&'static str, usize> = BTreeMap::new();
     let mut unexplained = Vec::new();
     for (r, cols) in free.iter().enumerate() {
         for &c in cols {
@@ -286,37 +309,40 @@ fn every_free_cell_in_the_trace_has_a_rule() {
             }
         }
     }
-    let total_free: usize = free.iter().map(|c| c.len()).sum();
-    let a: usize = by_rule
-        .iter()
-        .filter(|(k, _)| k.starts_with('a'))
-        .map(|(_, v)| v)
-        .sum();
-    let b: usize = by_rule
-        .iter()
-        .filter(|(k, _)| k.starts_with('b'))
-        .map(|(_, v)| v)
-        .sum();
+    Audit {
+        cells: n * w,
+        free: free.iter().map(|c| c.len()).sum(),
+        by_rule,
+        unexplained,
+    }
+}
+
+#[test]
+fn every_free_cell_in_the_trace_has_a_rule() {
+    let js = balanced_deployed(Break::None);
+    let audit = audit_free_cells(&js.wired, &js.witness);
+    let (a, b) = (audit.class('a'), audit.class('b'));
     println!(
-        "cells {}, read {}, free {total_free}: a {a}, b {b}",
-        n * w,
-        n * w - total_free
+        "cells {}, read {}, free {}: a {a}, b {b}",
+        audit.cells,
+        audit.cells - audit.free,
+        audit.free
     );
-    for (why, count) in &by_rule {
+    for (why, count) in &audit.by_rule {
         println!("  {why}: {count}");
     }
     assert!(
-        unexplained.is_empty(),
+        audit.unexplained.is_empty(),
         "free cells no rule explains: {:?}",
-        &unexplained[..unexplained.len().min(20)]
+        &audit.unexplained[..audit.unexplained.len().min(20)]
     );
     /*
      * Each word past the thirty sixth is one more pinned cell in the publics
      * region, taken from its rows past the public words.
      */
     let extra = crate::shield::join::publics::WORDS - 36;
-    assert_eq!(n * w, 360_448);
-    assert_eq!(n * w - total_free, 219_011 + extra);
+    assert_eq!(audit.cells, 360_448);
+    assert_eq!(audit.cells - audit.free, 219_011 + extra);
     assert_eq!(a, 119_980);
     assert_eq!(b, 21_457 - extra);
 }

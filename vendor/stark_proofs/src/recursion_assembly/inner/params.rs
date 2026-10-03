@@ -12,11 +12,18 @@ pub const EXTRA: u32 = crate::shield_params::inner::EXTRA_BLOWUP_BITS;
 /// gates test binding logic, which is rate-independent; re-proving the inner
 /// at rate 1/16 to check a copy constraint made every debug iteration cost a
 /// quarter hour. Emits and vectors never set this.
+#[cfg(feature = "std")]
 pub fn extra() -> u32 {
     std::env::var("NONOS_INNER_EXTRA")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(EXTRA)
+}
+
+/// Without std there is no environment: the deployment blowup.
+#[cfg(not(feature = "std"))]
+pub fn extra() -> u32 {
+    EXTRA
 }
 
 /// The recursion hash. Must equal the round count every in circuit compression

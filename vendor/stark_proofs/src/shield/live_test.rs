@@ -37,7 +37,7 @@ fn both_notes_open_to_the_anchor_the_spend_proves_against() {
 }
 
 /// The spend satisfies its own constraints against the live root. This is
-/// the statement the box will spend an hour proving, so it is worth
+/// the statement a server will spend an hour proving, so it is worth
 /// knowing in a second that it closes.
 #[test]
 fn the_first_spend_satisfies() {

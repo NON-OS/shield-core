@@ -1,9 +1,9 @@
 // NONOS Operating System (AGPL-3.0-or-later)
 //! The witness a wallet hands the prover, on the wire.
 //!
-//! THREAT 5: `ocean` builds a spend and nothing consumes it. The intent vector
-//! closed the half that needs no prover, which is that the two languages agree
-//! on what a transfer is. This is the other half: the private half crossing the
+//! A client builds a spend in its own language. The intent vector checks the
+//! half that needs no prover, which is that the two sides agree on what a
+//! transfer is. This is the other half: the private half crossing the
 //! boundary, so a proof can be made from a witness a client produced rather
 //! than from a fixture the prover built for itself.
 //!
@@ -231,7 +231,7 @@ impl SpendWitness {
     /// been, the walked root equalling the published one, and a wrong opening is
     /// honest arithmetic that walks somewhere else and fails there.
     ///
-    /// This is the seam THREAT 5 names. Everything above it is a client's, and
+    /// This is the seam between client and prover. Everything above it is a client's, and
     /// everything below is the circuit's.
     pub fn join_split(&self) -> JoinSplit {
         let pool = [&self.pool[0], &self.pool[1]];

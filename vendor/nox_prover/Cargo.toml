@@ -17,13 +17,17 @@ wasm-bindgen-rayon = { version = "1.2", optional = true }
 parallel = ["stark_proofs/parallel"]
 digest32 = ["stark_proofs/digest32"]
 radix8 = ["stark_proofs/radix8"]
-launch_v1 = ["stark_proofs/launch_v1"]
-v2 = ["stark_proofs/v2", "radix8", "digest32"]
-not_before = ["stark_proofs/not_before", "v2"]
-claim = ["stark_proofs/claim", "v2"]
-# Transcript recording, for the v2 review trace only.
+fri8 = ["stark_proofs/fri8", "radix8", "digest32"]
+not_before = ["stark_proofs/not_before", "fri8"]
+claim = ["stark_proofs/claim", "fri8"]
+# Transcript recording, for the transcript review trace only.
 kat = ["stark_proofs/kat"]
 wasm = ["dep:wasm-bindgen"]
 # A browser proving on every core: shared-memory wasm, built with
 # +atomics,+bulk-memory on nightly, served cross-origin isolated.
 wasm-threads = ["wasm", "parallel", "dep:wasm-bindgen-rayon"]
+
+# The activity statement exists on the format 7 transcript only.
+[[bin]]
+name = "emit_activity_vector"
+required-features = ["fri8"]

@@ -5,6 +5,9 @@
 //!
 //!     NOX_PROFILE_CACHE=<periodic.top> RAYON_NUM_THREADS=6 \
 //!         cargo test --release --features parallel --lib profile -- --ignored --nocapture
+//!
+//! `NOX_PROFILE_DIR` names another vector, the 37-word one under
+//! `spec/wallet-vectors-not-before/transfer-eth` in the `not_before` build.
 
 use crate::api::{prove_with, Options, Phase};
 use std::sync::Mutex;
@@ -13,7 +16,8 @@ use std::time::Instant;
 const DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../spec/wallet-vectors/transfer-eth");
 
 fn read(name: &str) -> String {
-    std::fs::read_to_string(format!("{DIR}/{name}")).expect("a pinned vector file")
+    let dir = std::env::var("NOX_PROFILE_DIR").unwrap_or_else(|_| DIR.into());
+    std::fs::read_to_string(format!("{dir}/{name}")).expect("a pinned vector file")
 }
 
 fn peak_mb() -> u64 {

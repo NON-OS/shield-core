@@ -123,9 +123,9 @@ pub fn fri_prove_ext_layer_zero_ground(
     // The final polynomial's coefficients, absorbed in place of the layer.
     let final_layer = final_coefficients(&current, coset, omega, final_log(log_n, log_blowup));
     transcript.absorb_fp2_vec(&final_layer);
-    // v2, on the launch transcript (the split query grind): the query shape,
+    // On the format 7 transcript (the split query grind): the query shape,
     // before the query grind, so a grind counts for one shape only (docs/16).
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     if grind_chunks > 1 {
         transcript.absorb_shape(super::shape_id(n_queries));
     }

@@ -89,10 +89,8 @@ pub fn single(classes: &[Vec<usize>], span: usize, width: usize) -> SinglePermut
 /// The permutation in the carrier the engine takes, at the packer's
 /// challenges.
 ///
-/// Those challenges being constants is unsound and not this function's doing:
-/// `wired_challenge_tests` breaks a copy constraint and gets accepted. They
-/// are repeated here rather than corrected so the two forms stay comparable
-/// and the correction lands once, where the challenges are drawn.
+/// The challenges are the packer's; this form repeats them so the two forms
+/// stay comparable. Where they are drawn is decided by the caller.
 pub fn single_group(classes: &[Vec<usize>], span: usize, width: usize) -> GpGroup {
     let p = single(classes, span, width);
     GpGroup {

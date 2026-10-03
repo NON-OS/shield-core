@@ -100,7 +100,7 @@ fn the_empty_and_abc_digests_are_pinned() {
 /// long buffer per leaf, and one eight byte value at a time per periodic
 /// column. Not a correctness test; run with `--ignored --nocapture` and
 /// read the two lines. A settlement proof hashes about a terabyte
-/// through here, so a factor here is an hour on the box.
+/// through here, so a factor here is an hour on a large server.
 #[test]
 #[ignore]
 #[cfg(feature = "parallel")]

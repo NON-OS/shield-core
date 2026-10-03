@@ -24,7 +24,7 @@ const DOM_NODE: &[u8] = b"NONOS-STARK-MERKLE-NODE";
 /// largest single lever on its size; 24 buys 96 bit collision resistance
 /// over a provable floor of 80, where 32 bought 128 the proof could not use.
 ///
-/// `digest32` keeps all 32, for v2: shared paths (format 6) pay for the
+/// `digest32` keeps all 32, for the `fri8` build: shared paths (format 6) pay for the
 /// wider digest. It is a build, not a setting, because the width moves every
 /// root, the periodic one included, and the parameter identity hashes it, so
 /// a proof at one width is refused by a verifier built for the other.

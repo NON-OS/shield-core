@@ -300,9 +300,9 @@ fn main() {
          *
          * "constant" means beta and gamma are circuit constants the prover
          * reads off this layout before choosing its trace, which makes the
-         * grand product argue nothing: `wired_forgery_tests` builds a witness
-         * the real settlement outer accepts with a copy constraint broken. A
-         * contract handed "constant" should refuse, exactly as it refuses an
+         * grand product argue nothing: a prover could break a copy constraint
+         * and still satisfy it. A contract handed "constant" should refuse,
+         * exactly as it refuses an
          * 80 bit inner rate.
          *
          * "transcript" means they are drawn after the named root is absorbed,

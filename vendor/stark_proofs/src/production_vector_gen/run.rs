@@ -27,11 +27,11 @@ fn spec_dir() -> Option<String> {
 #[test]
 #[ignore]
 fn gen_production_structure() {
-    // The recursion outer's reference vectors are v1 artifacts: v2 ships no
+    // The recursion outer's reference vectors are v1 artifacts: the `fri8` build ships no
     // outer, and docs/17 defines only the launch transcript. Refuse rather than
     // emit vectors from a transcript no document describes.
-    if cfg!(feature = "v2") {
-        panic!("the production recursive vectors are not generated under v2");
+    if cfg!(feature = "fri8") {
+        panic!("the production recursive vectors are not generated under `fri8`");
     }
     let Some(spec) = spec_dir() else {
         std::println!("NOX_SPEC_DIR unset, nothing to generate");
@@ -84,11 +84,11 @@ fn gen_production_structure() {
 #[test]
 #[ignore]
 fn gen_production_recursive_vector() {
-    // The recursion outer's reference vectors are v1 artifacts: v2 ships no
+    // The recursion outer's reference vectors are v1 artifacts: the `fri8` build ships no
     // outer, and docs/17 defines only the launch transcript. Refuse rather than
     // emit vectors from a transcript no document describes.
-    if cfg!(feature = "v2") {
-        panic!("the production recursive vectors are not generated under v2");
+    if cfg!(feature = "fri8") {
+        panic!("the production recursive vectors are not generated under `fri8`");
     }
     let Some(spec) = spec_dir() else {
         std::println!("NOX_SPEC_DIR unset, nothing to generate");

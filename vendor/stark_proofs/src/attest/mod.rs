@@ -24,8 +24,8 @@
 mod circuit;
 mod native;
 mod prove;
-// The statement is proven on the v2 transcript only, format 7.
-#[cfg(all(test, feature = "v2"))]
+// The statement is proven on the format 7 transcript only, format 7.
+#[cfg(all(test, feature = "fri8"))]
 mod test;
 
 pub use circuit::{shape, Witness};
@@ -55,7 +55,7 @@ pub const KIND: usize = 8;
 pub const LOG_TRACE: u32 = 14;
 pub const PAD_LOG: u32 = 13;
 pub const MASK_COLUMNS: usize = 2;
-/// Rate 1/64 over the minimal domain, as every shipped point.
-pub const EXTRA_BLOWUP_BITS: u32 = 5;
+/// Point A's rate, 2^-6: one home, in `shield_params::direct`.
+pub use crate::shield_params::direct::EXTRA_BLOWUP_BITS;
 /// Fresh blinding draws before a proof without its certificate is given up.
 pub const RANK_ATTEMPTS: usize = 3;

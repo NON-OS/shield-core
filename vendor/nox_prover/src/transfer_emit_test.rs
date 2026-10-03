@@ -1,8 +1,8 @@
 // NONOS Operating System (AGPL-3.0-or-later)
-//! The v2 pinned proofs (docs/17): the pinned transfer in the three accepted
+//! The transfer pinned proofs (docs/17): the pinned transfer in the three accepted
 //! query shapes, and a withdrawal whose fee is within the pool's cap, each
-//! proved on the v2 transcript, verified from its format 7 bytes, and given a
-//! rank certificate. Written to `spec/v2/` with a manifest.
+//! proved on the format 7 transcript, verified from its format 7 bytes, and given a
+//! rank certificate. Written to `spec/transfer/` with a manifest.
 //!
 //! The `not_before` build writes its own set to `spec/not-before/`: the same
 //! requests with word 36 set to `NB_T`, and the withdrawal at the pool's flat
@@ -10,9 +10,9 @@
 //! The `claim` build writes `spec/claim/`: the same requests, words 36 and 37
 //! the inputs' limb sums, which the prover computes and no request carries.
 //!
-//!     cargo test --release -p nox_prover --features v2,parallel -- \
-//!         v2_emit --ignored --nocapture
-#![cfg(feature = "v2")]
+//!     cargo test --release -p nox_prover --features fri8,parallel -- \
+//!         transfer_emit --ignored --nocapture
+#![cfg(feature = "fri8")]
 
 use stark_proofs::crypto::stark::air::{
     domain_params_blown, share_paths, stark_prove_ext_rounds, stark_verify_ext_rounds_positions,
@@ -20,7 +20,7 @@ use stark_proofs::crypto::stark::air::{
 };
 use stark_proofs::crypto::stark::field::Fp;
 use stark_proofs::crypto::stark::fri::FRI_FOLD_LOG;
-use stark_proofs::crypto::stark::fri_ext::V2_SHAPES;
+use stark_proofs::crypto::stark::fri_ext::QUERY_SHAPES;
 use stark_proofs::crypto::stark::hash::keccak256;
 use stark_proofs::host::{build_parts_with, Entropy};
 use stark_proofs::proof_wire::{
@@ -41,7 +41,7 @@ const OUT: &str = if cfg!(feature = "not_before") {
 } else if cfg!(feature = "claim") {
     "claim"
 } else {
-    "v2"
+    "transfer"
 };
 
 /// The builds whose withdrawal pays the flat fee and whose set carries the
@@ -221,7 +221,7 @@ fn prove_one(
     let log_n = domain_params_blown(&verifier, extra).0;
     let positions =
         stark_verify_ext_rounds_positions(verifier, &rounds, q, grind, extra, &root, &publics)
-            .expect("the v2 proof verifies");
+            .expect("the transfer proof verifies");
     let shared = share_paths(&rounds, &positions, log_n).expect("paths share");
     let f7 = serialize_rounds_shared(&rounds, &shared, &params);
     let (skeleton, streams) =
@@ -231,7 +231,7 @@ fn prove_one(
         .expect("the format 7 bytes verify");
 
     // A shape other than the proof's is refused.
-    let (_, oq, og) = V2_SHAPES[(V2_SHAPES.iter().position(|s| s.0 == id).unwrap() + 1) % 3];
+    let (_, oq, og) = QUERY_SHAPES[(QUERY_SHAPES.iter().position(|s| s.0 == id).unwrap() + 1) % 3];
     let v = join_split_shape(TREE_DEPTH, &publics);
     assert!(
         stark_verify_ext_rounds_shared_why(v, &skeleton, &streams, oq, og, extra, &root, &publics)
@@ -275,8 +275,8 @@ fn prove_one(
 }
 
 #[test]
-#[ignore = "release tier: proves the v2 pinned proofs"]
-fn v2_emit() {
+#[ignore = "release tier: proves the transfer pinned proofs"]
+fn transfer_emit() {
     let tdir = format!("{SPEC}/wallet-vectors/transfer-eth");
     let wdir = format!("{SPEC}/wallet-vectors/withdraw-eth");
     let ent = |dir: &str| -> Vec<u8> {
@@ -287,7 +287,7 @@ fn v2_emit() {
             .collect()
     };
     let mut out = Vec::new();
-    for s in V2_SHAPES {
+    for s in QUERY_SHAPES {
         let e = prove_one(
             "transfer-eth",
             &this_build(read(&tdir, "request.json")),
@@ -311,7 +311,7 @@ fn v2_emit() {
         &this_build(withdraw_capped_request()),
         &read(&wdir, "seed.json"),
         &ent(&wdir),
-        V2_SHAPES[0],
+        QUERY_SHAPES[0],
     );
     println!(
         "{} shape {}: {} bytes, {:.1} s",
@@ -328,7 +328,7 @@ fn v2_emit() {
             &this_build(request),
             &seed,
             &ent(&wdir),
-            V2_SHAPES[0],
+            QUERY_SHAPES[0],
         );
         println!(
             "{} shape {}: {} bytes, {:.1} s",
@@ -342,9 +342,9 @@ fn v2_emit() {
     } else if cfg!(feature = "not_before") {
         format!("# not_before pinned proofs\n\nThe 37-word statement, word 36 `not_before` = {NB_T} on the 600-second grid, withdrawal at the flat fee {FLAT_FEE} wei. ")
     } else {
-        String::from("# v2 pinned proofs\n\n")
+        String::from("# Transfer pinned proofs\n\n")
     };
-    let mut m = title + &String::from("The v2 transcript (docs/17), format 7, 32-byte digests, radix 8, periodic overlay, the checkpoint rule. Each proof was verified from its format 7 bytes, refused under another shape's parameters, and given a rank certificate.\n\n| proof | shape | queries | grind | bytes | keccak256 | parameter id | DEEP nonce | rank | prove s |\n|---|---|---|---|---|---|---|---|---|---|\n");
+    let mut m = title + &String::from("The format 7 transcript (docs/17), format 7, 32-byte digests, radix 8, periodic overlay, the checkpoint rule. Each proof was verified from its format 7 bytes, refused under another shape's parameters, and given a rank certificate.\n\n| proof | shape | queries | grind | bytes | keccak256 | parameter id | DEEP nonce | rank | prove s |\n|---|---|---|---|---|---|---|---|---|---|\n");
     for e in &out {
         m.push_str(&format!(
             "| {}-shape{} | {} | {} | {} | {} | `{}` | `{}` | {} | {} | {:.1} |\n",

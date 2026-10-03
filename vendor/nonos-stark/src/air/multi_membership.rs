@@ -54,7 +54,7 @@ pub struct MultiMembership {
     /// binds the bit to the same index scalar every other opening is bound to.
     /// Same shape as `pin0` one level down: there the bit selects a half of the
     /// state, here a half of the leaf. Opt-in, appended after `pin0`'s columns.
-    /// THREAT 6a.
+    ///
     pin_half: bool,
     /// Per opening: `None` binds the whole leaf, `Some(bit)` binds the half the
     /// bit names. Empty unless `pin_half`.
@@ -276,11 +276,9 @@ impl MultiMembership {
         self.half_col() + 1
     }
 
-    /// Whether the checkpoint row has its own selector and rule. Always, except
-    /// under `launch_v1`, which reproduces the live launch circuit for its
-    /// pinned vectors and must never build a new image.
+    /// Whether the checkpoint row has its own selector and rule: always.
     pub fn checkpoint_fixed(&self) -> bool {
-        !cfg!(feature = "launch_v1")
+        true
     }
 
     /// Rounds per compression, depth, and openings: the three numbers the

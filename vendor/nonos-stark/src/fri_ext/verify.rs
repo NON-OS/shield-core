@@ -76,9 +76,9 @@ pub fn fri_verify_ext_seeded_ground(
         return None;
     }
 
-    // v2, on the launch transcript: only the accepted shapes, each at its
+    // On the format 7 transcript: only the accepted shapes, each at its
     // own grind.
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     if grind_chunks > 1 && !super::shape_accepts(n_queries, grind_bits) {
         return None;
     }
@@ -104,7 +104,7 @@ pub fn fri_verify_ext_seeded_ground(
     // The shape comes from this verifier's own parameters, which the length
     // checks above already hold the proof to (queries == n_queries, nonces ==
     // grind_chunks), never from a count read off the proof.
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     if grind_chunks > 1 {
         transcript.absorb_shape(super::shape_id(n_queries));
     }
@@ -218,7 +218,7 @@ pub fn fri_final_vector_ext(
         transcript.challenge_fp2();
     }
     transcript.absorb_fp2_vec(&proof.final_layer);
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     if !proof.pow_chain.is_empty() {
         transcript.absorb_shape(super::shape_id(proof.queries.len()));
     }
@@ -260,7 +260,7 @@ pub fn fri_positions_ext(proof: &FriProofExt, log_n: u32, seed: Option<&[u8; 32]
         transcript.challenge_fp2();
     }
     transcript.absorb_fp2_vec(&proof.final_layer);
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     if !proof.pow_chain.is_empty() {
         transcript.absorb_shape(super::shape_id(proof.queries.len()));
     }

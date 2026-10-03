@@ -2,7 +2,7 @@
 //! The half of a pair leaf the quotient reads is a bit, and it is the bit the
 //! index names.
 //!
-//! THREAT 6a shares a FRI leaf between a value and its fold partner, which is
+//! The recursion shares a FRI leaf between a value and its fold partner, which is
 //! what makes one path per layer possible instead of one per opening. The cost
 //! is that the leaf holds two extension values and something has to say which
 //! the quotient consumes. A fixed lane is not an answer, because the answer

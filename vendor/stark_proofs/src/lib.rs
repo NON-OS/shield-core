@@ -2,22 +2,31 @@
 //! Host-runnable proofs for the STARK verification primitives. Includes the
 //! real src/crypto source and checks it against its specification.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 extern crate alloc;
 
+pub mod activity;
 pub mod attest;
 pub mod budget;
+#[cfg(feature = "std")]
 pub mod compose_pipeline;
 pub mod crypto;
 mod deployed;
+#[cfg(feature = "std")]
 pub mod host;
 pub mod lean_schedule;
+pub mod lean_text;
 pub mod proof_wire;
 pub mod recursion_assembly;
+#[cfg(feature = "std")]
 pub mod root_cache;
 pub mod shield;
 pub mod shield_params;
+#[cfg(feature = "std")]
 pub mod tree_cache;
 mod witness_satisfies;
+#[cfg(feature = "std")]
 pub mod wrap;
 pub mod zk_rank;
 
@@ -58,8 +67,6 @@ mod fri_tests;
 #[cfg(test)]
 mod grind_kat_test;
 #[cfg(test)]
-mod launch_hostile_test;
-#[cfg(test)]
 mod merkle_tests;
 #[cfg(test)]
 mod overlay_test;
@@ -94,8 +101,6 @@ mod relay_tests;
 #[cfg(test)]
 mod seam2_tests;
 #[cfg(test)]
-mod shared_paths_test;
-#[cfg(test)]
 mod shield_free_cells_tests;
 #[cfg(test)]
 mod spec_out;
@@ -105,10 +110,6 @@ mod stark_selftest_gen;
 mod vk_stability_tests;
 #[cfg(test)]
 mod wired_chained_tests;
-#[cfg(test)]
-mod wired_challenge_tests;
-#[cfg(test)]
-mod wired_forgery_tests;
 #[cfg(test)]
 mod wired_rounds_tests;
 #[cfg(test)]

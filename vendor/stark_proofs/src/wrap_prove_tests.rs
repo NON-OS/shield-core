@@ -3,7 +3,7 @@
 //! The wrap in program form: assembled over the typed outer, its wiring held
 //! class by class, assembled at full cap, and proved. The cap-two and full
 //! outers are proved under Poseidon once and read back from a cache named
-//! by `NONOS_WRAP_CACHE`, because each is most of an hour on the box.
+//! by `NONOS_WRAP_CACHE`, because each is most of an hour on a large server.
 
 use crate::crypto::stark::air::{Air, Permuted, Poseidon};
 use crate::crypto::stark::field::Fp;
@@ -79,7 +79,7 @@ fn the_wrap_assembles_as_a_program_over_the_typed_outer() {
 
 /// The typed outer proved under Poseidon and packed as an inner, from a
 /// cache when one is named: proving the cap-two outer is forty minutes on
-/// the box and the proof is the same every time, so a diagnostic that needs
+/// a server and the proof is the same every time, so a diagnostic that needs
 /// it four times an evening reads it back instead. `NONOS_WRAP_CACHE` names
 /// the directory; unset, it proves.
 fn packed_typed_outer(h: &Poseidon) -> crate::wrap::OuterInner {

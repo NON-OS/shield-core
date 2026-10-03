@@ -127,12 +127,12 @@ fn read_body_split(
     for _ in 0..n_periodic {
         periodic_z.push(r.fp2()?);
     }
-    #[cfg(feature = "v2")]
+    #[cfg(feature = "fri8")]
     let deep_nonce = {
         let b = r.take(8)?;
         u64::from_le_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
     };
-    #[cfg(not(feature = "v2"))]
+    #[cfg(not(feature = "fri8"))]
     let deep_nonce = 0u64;
 
     let n_q = proof.queries.len();

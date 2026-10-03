@@ -19,7 +19,7 @@ pub struct StarkQueryExtP {
     /// Layer zero of the FRI is this codeword and its leaves hold fold pairs, so
     /// a consistency query at `p` opens the leaf holding `p` and its partner.
     /// Carrying the partner costs one extension value and saves the second path
-    /// the old shape spent on every query of every layer. THREAT 6a.
+    /// the old shape spent on every query of every layer.
     pub deep_sib: Fp2,
     pub deep_path: Vec<[Fp; RATE]>,
     pub trace: Vec<Fp>,

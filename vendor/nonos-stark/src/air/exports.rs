@@ -38,6 +38,7 @@ pub use super::index_point::IndexPoint;
 pub use super::horner::Horner;
 pub use super::draw_ood_poseidon::ood_point_ok;
 pub use super::index_scalar::IndexScalar;
+pub use super::activity_count::{ActivityCount, SLOTS as ACTIVITY_SLOTS};
 pub use super::live_gate::{LiveGate, LANES};
 pub use super::attestation::measure::measure_capsule;
 pub use super::merkle_membership::MerkleMembership;

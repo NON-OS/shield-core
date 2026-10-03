@@ -10,11 +10,9 @@
 //! to model: two roots absorbed in this order, and one more chain opening per
 //! query. The outer cannot verify a proof of this shape until it does.
 //!
-//! The join-split's copy constraint is argued at beta = 5 and gamma = 7 today,
-//! set in four places under `shield/wire*.rs` and never drawn. It survives
-//! only because none of the 371 cells its permutation binds is free of its
-//! regions, which `the_join_split_leaves_no_cell_a_forgery_could_spend` gates.
-//! This removes the reliance on that.
+//! The copy constraint's challenges are drawn from the transcript after the
+//! region columns are committed, so no permutation argument rests on a point
+//! the prover knew in advance.
 
 use super::super::super::field::{Fp, Fp2};
 use super::super::super::fri_poseidon_ext::fri_prove_poseidon_ext_seeded;
