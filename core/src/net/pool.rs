@@ -19,13 +19,20 @@ pub struct Pool {
     pub words_per_intent: u8,
     pub shape: Shape,
     pub assets: &'static [Asset],
-    pub landers: &'static [&'static str],
+    pub landers: &'static [Lander],
     pub policy: Option<&'static str>,
     /// Where a spend's association root must be published, when the pool has a registry.
     pub registry: Option<&'static str>,
 }
 
 pub const ACTIVE: Pool = PRODUCTION;
+
+/// One lander, on Tor and on Anyone, its hand-off ids good on either.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Lander {
+    pub tor: &'static str,
+    pub anyone: Option<&'static str>,
+}
 
 /// `address(1)`: a spend's fee goes to whoever submits its settlement.
 pub const SUBMITTER: [u8; 20] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];

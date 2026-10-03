@@ -1,28 +1,30 @@
-//! The landers of a pool, tried in order. One is used only when its `/v1/info` names the pool and
-//! takes a fee paid to whoever submits. A lander that cannot be reached, or names another pool, is
-//! passed over for the next. A refusal from one that answered is its verdict and ends the search.
-//! A proof may reach more than one lander: the pool lands it once.
+//! The landers of a pool, tried in order over Tor, each used only when `/v1/info` names the pool and
+//! takes the submitter fee. One that fails, names another pool or refuses is passed over, a refusal
+//! shown only when every lander gave one. The pool lands a proof once, whoever reaches it.
 
 use super::{ask, hand, reply, Handed};
 use crate::error::NetError;
+use crate::net::pool::Lander;
 use crate::net::tor::Tor;
 
-/// The first lander in `landers` ready for `pool`, and what it made of the hand-off `json`.
+/// The first lander in `landers` that queues the hand-off `json` for `pool`, or the last refusal
+/// when none queues it.
 pub fn hand_first(
     tor: &Tor,
-    landers: &[&str],
+    landers: &[Lander],
     pool: &str,
     json: &str,
 ) -> Result<(usize, Handed), NetError> {
-    let mut last = NetError::Transport;
-    for (at, onion) in landers.iter().enumerate() {
-        let tried = ready(tor, onion, pool).and_then(|_| hand(tor, onion, json));
-        match tried {
-            Ok(handed) => return Ok((at, handed)),
-            Err(e) => last = e,
+    let mut last = Err(NetError::Transport);
+    for (at, lander) in landers.iter().enumerate() {
+        match ready(tor, lander.tor, pool).and_then(|_| hand(tor, lander.tor, json)) {
+            Ok(Handed::Queued { id }) => return Ok((at, Handed::Queued { id })),
+            Ok(refused) => last = Ok((at, refused)),
+            Err(e) if last.is_err() => last = Err(e),
+            Err(_) => {}
         }
     }
-    Err(last)
+    last
 }
 
 /// Whether the lander at `onion` serves `pool` and takes the submitter fee, as one error if not.
@@ -47,8 +49,8 @@ mod live {
     #[ignore]
     fn every_lander_serves_the_pool_over_tor() {
         let tor = Tor::start(&std::env::temp_dir().join("nox-tor-landers")).expect("bootstrap");
-        for onion in ACTIVE.landers {
-            ready(&tor, onion, ACTIVE.address).expect(onion);
+        for lander in ACTIVE.landers {
+            ready(&tor, lander.tor, ACTIVE.address).expect(lander.tor);
         }
     }
 }

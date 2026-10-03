@@ -12,6 +12,7 @@ pub mod fee_quote;
 pub mod fee_schedule;
 #[cfg(feature = "fuzzing")]
 pub mod fuzz_hook;
+mod landers;
 pub(crate) mod onion;
 mod policy;
 pub mod pool;

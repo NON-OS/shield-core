@@ -28,7 +28,7 @@ impl Wallet {
     /// Where the hand-off `id` stands, asked of the lander that took it.
     pub fn relayer_state(&self, id: String) -> Result<RelayState, WalletError> {
         let at = super::publish::read_record(&self.handoff_dir()).map_or(0, |r| r.lander);
-        let onion = ACTIVE.landers.get(at).copied().ok_or(WalletError::Unavailable)?;
+        let onion = ACTIVE.landers.get(at).map(|l| l.tor).ok_or(WalletError::Unavailable)?;
         Ok(relay::state(self.tor()?.as_ref(), onion, &id)?)
     }
 

@@ -2,6 +2,7 @@
 
 use super::asset::{ETH, FORMAT5_NOX, NOX};
 use super::asset_v2::{PROD_ETH, PROD_NOX, V2_ETH, V2_NOX};
+use super::landers::LANDERS;
 use super::pool::{Pool, Shape};
 
 /// The format 5 pool: composition recomputed on chain, value conserved over the integers.
@@ -40,15 +41,6 @@ pub const V2: Pool = Pool {
     registry: Some("0xf6b5c3470eb7f1bde3412e72eff4235a4536a206"),
 };
 
-/// The production landers, tried in this order, each given 20 seconds. The first was confirmed by a
-/// transfer that settled through it, and each serves the production pool with the same API.
-const LANDERS: [&str; 5] = [
-    "mforujillfk4w5h2zqgxdzendn3qb2zes4r2h57ownojshhmtcdzgdyd.onion",
-    "lfpw5uoslfiqmwsc7o2d2qts3grmfnixrhae3hkgkv6x4dlxpvafp4yd.onion",
-    "7ywwruseitmycfjwh2upbecetm6edej7pkxpp4xtzmtioes4ubs63kad.onion",
-    "g7uyxmffgim7sneprrkdp4ecshupvd3kuaadho6f7e2gcd3gazimriyd.onion",
-    "ewjq3ue43pclh6qyx3triup7org64nykbjgy7tmderlzzx27kstfdiqd.onion",
-];
 pub const LANDER_ON: bool = true;
 
 /// The production pool: 37-limb proofs with a not-before time on a ten-minute grid, and a fee of
