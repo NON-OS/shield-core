@@ -13,27 +13,27 @@ jobs:
   dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: The dependency set is an allowlist, recomputed not maintained
         run: scripts/check-dependencies.sh
 
   no-logging:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: The core writes to no log, no terminal and no debug macro
         run: scripts/check-no-logging.sh
 
   no-network-elsewhere:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Only the net module opens a socket
         run: scripts/check-one-destination.sh
 
   no-identifiers:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Nothing generates, stores or sends a unique identifier
         run: scripts/check-no-identifiers.sh

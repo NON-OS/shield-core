@@ -22,7 +22,7 @@ jobs:
   extraction:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Nix builds the pinned Rust toolchain for Charon from source, which
       # outgrows a runner's free disk with the preinstalled SDKs still on it.
@@ -32,7 +32,7 @@ jobs:
       # Nix, because flake.lock is the one place the tool versions live: the
       # Aeneas commit, and through it the Charon it was built against. A
       # builder on a laptop and this runner install the same bytes.
-      - uses: cachix/install-nix-action@v27
+      - uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
@@ -50,7 +50,7 @@ jobs:
         if: failure()
         run: nix build --print-build-logs .#extraction && cp result/NoxVerified.lean NoxVerified.lean
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: NoxVerified-regenerated
@@ -60,7 +60,7 @@ jobs:
       # The proofs. This fetches mathlib, which the Aeneas Lean library needs
       # and which the model proofs in lean/ deliberately do not, which is why
       # the two are separate packages and the check workflow builds the other.
-      - uses: leanprover/lean-action@v1
+      - uses: leanprover/lean-action@f061402b660e0c34644504b324e830f2991d4865 # v1
         with:
           lake-package-directory: lean-verified
           build: true
