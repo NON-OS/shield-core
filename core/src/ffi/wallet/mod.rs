@@ -65,3 +65,6 @@ pub struct Wallet {
     active: AtomicU32,
     searched: AtomicU32,
 }
+
+#[cfg(target_arch = "wasm32")]
+mod deposit_notes;
