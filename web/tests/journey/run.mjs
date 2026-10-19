@@ -12,7 +12,7 @@ import { title } from "../title.mjs";
 import { browser, open, serve } from "./harness.mjs";
 
 const [site, wordsA, wordsB, step] = process.argv.slice(2);
-const port = 8821;
+const port = Number(process.env.PORT ?? 8821);
 const base = `http://localhost:${port}`;
 const server = await serve(site, port);
 const b = await browser();
