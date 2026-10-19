@@ -44,12 +44,17 @@ answers over Tor for its own chain.
 | Shielded pool history, Sepolia | `ethereum-sepolia-rpc.publicnode.com`, `rpc.sepolia.ethpandaops.io` | `core/src/net/pool.rs` |
 | Public account reads, Ethereum | `ethereum-rpc.publicnode.com`, `eth.rpc.blxrbdn.com`, `eth-mainnet.public.blastapi.io` | `core/src/evm/network.rs` |
 | Public account sends, Ethereum | `rpc.flashbots.net`, then `rpc.mevblocker.io` | same |
-| Public account reads, Sepolia | `ethereum-sepolia-rpc.publicnode.com`, `rpc.sepolia.ethpandaops.io`, `sepolia.gateway.tenderly.co` | same |
+| Public account reads, Sepolia | `ethereum-sepolia-rpc.publicnode.com`, `rpc.sepolia.ethpandaops.io` | same |
 | Public account sends, Sepolia | `ethereum-sepolia-rpc.publicnode.com`, `rpc.sepolia.ethpandaops.io` | same |
 
 On mainnet a signed transaction goes to a private relay, which keeps it out of the public mempool
 until it is mined, so a NOX sale cannot be sandwiched on its way in. Flashbots accepts at most 8
 calls in a batch, so the lookups of held sends go 4 at a time (`core/src/evm/held.rs`).
+
+Sepolia has two public account servers. A NOX review reads the token's rules from two servers and
+needs them to agree, so while either is down a NOX send on Sepolia is refused and nothing is sent.
+Ether and USDC reads move on to the other server. The other public Sepolia servers tried either
+refuse Tor exits or cap a batch below what a review sends.
 
 ## What every batch checks
 

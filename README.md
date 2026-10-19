@@ -354,8 +354,7 @@ is no direct connection to fall back to. A stalled connection gives up after 30 
 
 **What the wallet contacts.** The Tor network. Public RPCs:
 `ethereum-rpc.publicnode.com`, `eth.rpc.blxrbdn.com` and `eth-mainnet.public.blastapi.io` on
-mainnet, and `ethereum-sepolia-rpc.publicnode.com`, `rpc.sepolia.ethpandaops.io` and
-`sepolia.gateway.tenderly.co` on Sepolia. On mainnet, signed
+mainnet, and `ethereum-sepolia-rpc.publicnode.com` and `rpc.sepolia.ethpandaops.io` on Sepolia. On mainnet, signed
 transactions go to the private relays `rpc.flashbots.net` and then `rpc.mevblocker.io`, which
 keep them out of the public mempool until they are mined. A spend goes to the lander onion
 service, and the rewards registry and the fee policy are read through the Sepolia RPCs above.

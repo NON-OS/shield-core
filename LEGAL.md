@@ -40,7 +40,7 @@ The third parties it contacts are:
 
 - the Tor network, whose relays carry the traffic
 - public Ethereum RPC providers, which answer reads of public chain state: `publicnode.com`,
-  `blxrbdn.com` (bloXroute), `blastapi.io` (Bware Labs), `ethpandaops.io` and `tenderly.co`
+  `blxrbdn.com` (bloXroute), `blastapi.io` (Bware Labs) and `ethpandaops.io`
 - on Sepolia, `publicnode.com` and then `ethpandaops.io`, which also receive signed transactions
   from the public account
 - on Ethereum mainnet, the private transaction relays `rpc.flashbots.net` (Flashbots) and
