@@ -6,8 +6,10 @@
 
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { headers } from "./headers.mjs";
+import { pagesRules } from "./pages-rules.mjs";
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -25,6 +27,14 @@ const types = {
 
 const root = resolve(process.argv[2] ?? ".");
 const port = Number(process.argv[3] ?? 8787);
+// The endpoints a release lists. A site without a manifest, such as the bench, reaches none.
+const listed = join(root, "release-manifest.json");
+const connect = existsSync(listed) ? JSON.parse(readFileSync(listed, "utf8")).connect : [];
+const sent = headers(connect);
+// A built release carries Cloudflare's `_headers`, and then this server applies it as Pages would.
+const rulesFile = join(root, "_headers");
+const rules = existsSync(rulesFile) ? pagesRules(readFileSync(rulesFile, "utf8")) : null;
+const headersFor = (path) => (rules ? rules(path) : { ...sent, "Cache-Control": "no-cache" });
 
 createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
@@ -37,12 +47,11 @@ createServer(async (req, res) => {
     if ((await stat(file)).isDirectory()) file = join(file, "index.html");
     const body = await readFile(file);
     res.writeHead(200, {
-      ...headers,
+      ...headersFor(path),
       "Content-Type": types[extname(file)] ?? "application/octet-stream",
-      "Cache-Control": "no-cache",
     });
     res.end(body);
   } catch {
-    res.writeHead(404, headers).end();
+    res.writeHead(404, headersFor(path)).end();
   }
 }).listen(port, "127.0.0.1", () => console.log(`serving ${root} on http://127.0.0.1:${port}`));

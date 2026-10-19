@@ -7,15 +7,19 @@
 //! the phones run.
 
 mod calls;
+mod endpoints;
 mod guard;
 mod json;
 #[cfg(feature = "panic-report")]
 mod panic_report;
+mod periodic_cache;
 mod periodic_root;
 mod views;
 mod wallet;
 
+pub use endpoints::endpoint_hosts;
 #[cfg(feature = "panic-report")]
 pub use panic_report::report_panics;
+pub use periodic_cache::periodic_cache;
 pub use periodic_root::periodic_root;
 pub use wallet::{changed_files, load_file, WebWallet};
