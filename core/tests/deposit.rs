@@ -122,6 +122,19 @@ fn the_pre_flight_refuses_what_the_contract_refuses_in_its_order() {
     );
 }
 
+/// A fee the contract takes but a restore never tries is refused, so no deposit is made that the
+/// words could not find again. The highest fee tried still passes.
+#[test]
+fn a_fee_above_the_search_is_refused() {
+    let most = nox_shield_core::discovery::MOST_DEPOSIT_FEE_BPS;
+    let at = |fee_bps| check_deposit(&PoolState { fee_bps, ..open_pool() }, u128::from(NOX));
+    assert_eq!(at(most), Ok(()));
+    assert_eq!(at(most + 1), Err(Refusal::FeeAboveSearch));
+    assert_eq!(at(5_000), Err(Refusal::FeeAboveSearch));
+    let paused = PoolState { fee_bps: most + 1, deposits_paused: true, ..open_pool() };
+    assert_eq!(check_deposit(&paused, u128::from(NOX)), Err(Refusal::DepositsPaused));
+}
+
 #[test]
 fn the_trap_pool_is_refused_although_it_still_takes_deposits() {
     // 0x4F112D...5c53 is wound down with deposits open. The contract would accept the

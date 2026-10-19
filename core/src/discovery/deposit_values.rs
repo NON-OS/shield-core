@@ -8,7 +8,8 @@ use crate::wallet::split_deposit;
 use std::collections::BTreeSet;
 
 /// The highest deposit fee tried, in basis points. The pool keeps 50 today, and twice that
-/// leaves room for a policy change without a new build.
+/// leaves room for a policy change without a new build. A deposit above it is refused before review
+/// (`wallet::deposit_gate`), since a restore would never find it.
 pub const MOST_DEPOSIT_FEE_BPS: u16 = 100;
 
 /// Every `(asset id, note value)` a deposit of `assets` can make, each once.

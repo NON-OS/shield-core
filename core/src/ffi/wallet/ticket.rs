@@ -73,5 +73,8 @@ pub(super) fn sentence(refusal: Refusal) -> &'static str {
         Refusal::NotOnBetaList => "That EVM address is not on the beta list.",
         Refusal::AddressCapReached => "That EVM address has reached its beta limit.",
         Refusal::PoolCapReached => "The pool has reached its beta limit.",
+        Refusal::FeeAboveSearch => {
+            "The pool's fee is higher than this app can find deposits under. Update the app first."
+        }
     }
 }

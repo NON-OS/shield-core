@@ -34,6 +34,9 @@ pub enum Refusal {
     NotOnBetaList,
     AddressCapReached,
     PoolCapReached,
+    /// The pool's fee is above the highest a restore tries, so the deposit, though the contract
+    /// would take it, could not be found again from the words. The contract never refuses this.
+    FeeAboveSearch,
 }
 
 /// The contract's `absorb` checks, in its order, for `amount` in base units.
@@ -60,7 +63,11 @@ pub fn check(state: &PoolState, amount: u128) -> Result<(), Refusal> {
             return Err(Refusal::PoolCapReached);
         }
     }
-    split_deposit(units, state.fee_bps).map(|_| ()).ok_or(Refusal::Amount)
+    let split = split_deposit(units, state.fee_bps).map(|_| ()).ok_or(Refusal::Amount);
+    if split.is_ok() && state.fee_bps > crate::discovery::MOST_DEPOSIT_FEE_BPS {
+        return Err(Refusal::FeeAboveSearch);
+    }
+    split
 }
 
 /// Base units as whole note units: at least one, below p - 1, nothing left over.
