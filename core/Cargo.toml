@@ -30,13 +30,22 @@ x-wing = { workspace = true }
 chacha20poly1305 = { workspace = true }
 sha3 = { workspace = true }
 k256 = { workspace = true }
+zeroize = { workspace = true }
+uniffi = { workspace = true }
+
+# The wallet's own Tor client, in every native build. A browser cannot open a socket, so the wasm
+# build leaves it out and `net::tor` there is a transport that cannot be made. A target line and
+# not a feature, so a native build resolves exactly what it did before the web build existed.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 arti-client = { workspace = true }
 tor-rtcompat = { workspace = true }
 tokio = { workspace = true }
 rustls = { workspace = true }
 webpki-roots = { workspace = true }
-zeroize = { workspace = true }
-uniffi = { workspace = true }
+
+# A browser has no randomness source getrandom knows by default; there it asks Web Crypto.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { workspace = true, features = ["js"] }
 
 # A grep for unwrap is not a proof that nothing panics. These are the lints
 # that are: an index, a slice range and an arithmetic overflow are the three
