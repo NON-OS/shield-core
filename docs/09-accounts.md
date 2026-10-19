@@ -19,7 +19,7 @@ little endian bytes (`keys::material`). No key of one account can be computed fr
 | `spend_pk`, `nk` | Poseidon of `sk`, in the circuit | receive, find spent notes |
 | X-Wing receiving seed | `nox-shield 2026 receive key v1` | opens notes sent to the account |
 | note store key | `nox-shield 2026 note store key v1` | seals the account note log |
-| deposit key | `nox-shield 2026 deposit key v1` | draws each deposit blinding under `shield/deposit/v1`, never exported |
+| deposit key | `nox-shield 2026 deposit key v1` | draws each deposit blinding under `nox-shield 2026 deposit blinding v1`, never exported |
 | public account | BIP-32 at `m/44'/60'/0'/0/i` | the standard account at index i |
 
 Each account keeps its own sealed note log: `notes.log` for account 0 and `notes-i.log` after it.

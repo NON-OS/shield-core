@@ -22,7 +22,7 @@ Each deposit blinding is now drawn from the seed.
    `nox-shield 2026 deposit key v1`, as it derives its view key and its store key
    (`keys/deposit_key.rs`). It lives in the account while the wallet is unlocked, wipes on drop,
    prints as `DepositKey(redacted)` and never crosses the FFI.
-2. The blinding of deposit index i is four field words drawn under the context `shield/deposit/v1`
+2. The blinding of deposit index i is four field words drawn under the context `nox-shield 2026 deposit blinding v1`
    from the deposit key, the chain id (8 bytes, little endian), the pool address (20 bytes), the
    account index (4 bytes, little endian) and i (4 bytes, little endian). The draw is the field key
    draw the spend secret uses: 128 bytes of BLAKE3 output through the rejection sampler of the
@@ -160,10 +160,10 @@ is its four words in order, each as sixteen hex digits.
 
 | Account | Deposit | Blinding |
 |---|---|---|
-| 0 | 0 | `63c512c68338b9ce6a502bf3ba4e5a2df46bd28e8a7e4196d896c55b3f5ba88d` |
-| 0 | 1 | `50d705c61ab2c3e65e5acb0829c5d16b659e601ad27f2a2d41f93e57d3702174` |
-| 1 | 0 | `b4091403d3a5bdf3dbeddc599f4716e932a9f64c4b5cb343af201ed975a98568` |
-| 1 | 1 | `e3a040c1855a76b0e1fa76140f8e24deb299aa818880947e6ac3f04815f51f8c` |
+| 0 | 0 | `2b6ef0e0903b933420d63051a8671a53569e9499c929bcd5b625ef8a24ab5391` |
+| 0 | 1 | `7f872a867f5db5c190d8244e99478c610be08bb3c45e6ff40949d62d9be4f6a2` |
+| 1 | 0 | `ff694c64e5fd1ba09c340298d222df14d5e532216d28f11173b82fc7fd2147ff` |
+| 1 | 1 | `ea29e76a619c578156ecda48f09aeb8eb87daff775f0067149a25bd9850edcbb` |
 
 ## Open points
 

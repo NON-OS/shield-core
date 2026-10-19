@@ -60,17 +60,22 @@ fn the_vectors_hold() {
     ];
     let site = DepositSite { chain_id: 11_155_111, pool };
     let expected = [
-        (0, 0, "63c512c68338b9ce6a502bf3ba4e5a2df46bd28e8a7e4196d896c55b3f5ba88d"),
-        (0, 1, "50d705c61ab2c3e65e5acb0829c5d16b659e601ad27f2a2d41f93e57d3702174"),
-        (1, 0, "b4091403d3a5bdf3dbeddc599f4716e932a9f64c4b5cb343af201ed975a98568"),
-        (1, 1, "e3a040c1855a76b0e1fa76140f8e24deb299aa818880947e6ac3f04815f51f8c"),
+        (0, 0, "2b6ef0e0903b933420d63051a8671a53569e9499c929bcd5b625ef8a24ab5391"),
+        (0, 1, "7f872a867f5db5c190d8244e99478c610be08bb3c45e6ff40949d62d9be4f6a2"),
+        (1, 0, "ff694c64e5fd1ba09c340298d222df14d5e532216d28f11173b82fc7fd2147ff"),
+        (1, 1, "ea29e76a619c578156ecda48f09aeb8eb87daff775f0067149a25bd9850edcbb"),
     ];
-    for (account, index, hex) in expected {
-        let a = Account::at(&seed, account).expect("an account");
-        let words = a.deposit_key().blinding(&site, index).expect("a blinding");
-        let got: String = words.iter().map(|w| format!("{w:016x}")).collect();
-        assert_eq!(got, hex, "account {account}, deposit {index}");
-    }
+    let got: Vec<(u32, u32, String)> = expected
+        .iter()
+        .map(|(account, index, _)| {
+            let a = Account::at(&seed, *account).expect("an account");
+            let words = a.deposit_key().blinding(&site, *index).expect("a blinding");
+            (*account, *index, words.iter().map(|w| format!("{w:016x}")).collect())
+        })
+        .collect();
+    let want: Vec<(u32, u32, String)> =
+        expected.iter().map(|(a, i, hex)| (*a, *i, (*hex).to_string())).collect();
+    assert_eq!(got, want, "account, deposit, blinding");
 }
 
 #[test]

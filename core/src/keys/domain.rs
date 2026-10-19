@@ -24,4 +24,4 @@ pub const VIEW_KEY_TAG: &[u8] = b"nox-shield/viewkey/v1";
 pub const DEPOSIT_KEY_CONTEXT: &str = "nox-shield 2026 deposit key v1";
 /// One deposit's blinding, drawn from the deposit key with the chain, pool, account and index.
 /// Changing it loses every deposit a restore would otherwise find again.
-pub const DEPOSIT_CONTEXT: &str = "shield/deposit/v1";
+pub const DEPOSIT_CONTEXT: &str = "nox-shield 2026 deposit blinding v1";
