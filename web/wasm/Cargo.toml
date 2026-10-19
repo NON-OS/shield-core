@@ -1,0 +1,28 @@
+[package]
+name = "nox_shield_web"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "The NOX Shield wallet core and prover, built for a browser"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+nox_shield_core = { path = "../../core", default-features = false }
+nox_prover = { workspace = true }
+wasm-bindgen = "=0.2.128"
+
+# The prover's own browser exports, `prove` and `prove_with_cache`. On this target line, so a
+# native build of the workspace never compiles them.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+nox_prover = { workspace = true, features = ["wasm"] }
+
+[features]
+default = []
+# Every core: shared memory, a rayon pool on Web Workers and the prover's per-thread allocator
+# cache. Needs the nightly named in web/toolchain and a cross-origin isolated page.
+threads = ["nox_prover/wasm-threads"]
+# Panics printed to the console, for a debug build.
+panic-report = []

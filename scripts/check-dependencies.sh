@@ -21,7 +21,7 @@ python3 - <<'PY' > /tmp/nox-dependencies.now
 import json
 with open("/tmp/nox-metadata.json") as handle:
     data = json.load(handle)
-mine = {"nox_shield_core", "nox_field_kernel"}
+mine = {"nox_shield_core", "nox_field_kernel", "nox_shield_web"}
 for name in sorted({p["name"] for p in data["packages"] if p["name"] not in mine}):
     print(name)
 PY
