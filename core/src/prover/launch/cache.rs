@@ -17,17 +17,17 @@ pub fn path(dir: &Path) -> PathBuf {
 /// This circuit's cache when held, after any file of another circuit is removed.
 pub fn read(dir: &Path) -> Option<Vec<u8>> {
     let own = path(dir);
-    for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+    for entry in crate::fs::read_dir(dir).into_iter().flatten().flatten() {
         let name = entry.file_name();
         let name = name.to_string_lossy();
         if name.starts_with(PREFIX) && name.ends_with(SUFFIX) && entry.path() != own {
-            let _ = std::fs::remove_file(entry.path());
+            let _ = crate::fs::remove_file(entry.path());
         }
     }
-    std::fs::read(own).ok()
+    crate::fs::read(own).ok()
 }
 
 /// Keep the cache a proof built, for the next proof. A failed write costs only time.
 pub fn keep(dir: &Path, built: &[u8]) {
-    let _ = std::fs::write(path(dir), built);
+    let _ = crate::fs::write(path(dir), built);
 }

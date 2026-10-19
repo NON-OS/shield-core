@@ -11,9 +11,9 @@ impl Vault {
         if !self.exists() {
             return Ok(());
         }
-        let length = std::fs::metadata(&self.path).map_err(|_| CustodyError::VaultShape)?.len();
+        let length = crate::fs::metadata(&self.path).map_err(|_| CustodyError::VaultShape)?.len();
         let length = usize::try_from(length).map_err(|_| CustodyError::VaultShape)?;
         self.write_blob(&vec![0u8; length])?;
-        std::fs::remove_file(&self.path).map_err(|_| CustodyError::VaultShape)
+        crate::fs::remove_file(&self.path).map_err(|_| CustodyError::VaultShape)
     }
 }

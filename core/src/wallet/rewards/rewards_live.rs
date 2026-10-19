@@ -4,7 +4,7 @@
 use super::rewards_vectors::{address, M};
 use super::{read_link, EPOCH, GENESIS};
 use crate::net::tor::Tor;
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::time::{SystemTime, UNIX_EPOCH};
 
 /// The registry answers over Tor with the epoch the clock says. Needs the network, so `--ignored`.
 #[test]

@@ -13,8 +13,8 @@ use crate::ffi::evm::parse_evm_address;
 use crate::ffi::PublicShield;
 use crate::net::asset::Coin;
 use crate::net::pool::{ACTIVE, RPCS};
+use crate::time::Instant;
 use crate::wallet::{check_deposit, prepare_deposit, read_pool_state_checked};
-use std::time::Instant;
 
 #[uniffi::export]
 impl Wallet {

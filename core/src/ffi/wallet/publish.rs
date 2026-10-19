@@ -7,9 +7,9 @@ use super::Wallet;
 use crate::error::{CustodyError, StoreError, WalletError};
 use crate::net::pool::ACTIVE;
 use crate::net::relay::{self, Handed};
+use crate::time::{SystemTime, UNIX_EPOCH};
 use crate::wallet::publish::{Published, Route, RECORD};
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[uniffi::export]
 impl Wallet {
@@ -54,14 +54,14 @@ impl Wallet {
         let record = Published { first, last: now, times, route: Route::Lander, id, lander };
         // A spend refused the first time was never published, so no timer starts for it.
         if refusal.is_none() || prior.is_some() {
-            std::fs::write(dir.join(RECORD), record.to_text()).map_err(|_| StoreError::Io)?;
+            crate::fs::write(dir.join(RECORD), record.to_text()).map_err(|_| StoreError::Io)?;
         }
         Ok((record, refusal))
     }
 }
 
 pub(super) fn read_record(dir: &Path) -> Option<Published> {
-    Published::from_text(&std::fs::read_to_string(dir.join(RECORD)).ok()?)
+    Published::from_text(&crate::fs::read_to_string(dir.join(RECORD)).ok()?)
 }
 
 pub(super) fn now() -> Result<u64, WalletError> {

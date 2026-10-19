@@ -36,8 +36,8 @@ pub fn write_handoff(
     proof: &LaunchProof,
     sealed: &[[u8; BLOB_LEN]; 2],
 ) -> Result<Vec<PathBuf>, WalletError> {
-    let _ = std::fs::remove_dir_all(dir);
-    std::fs::create_dir_all(dir).map_err(|_| StoreError::Io)?;
+    let _ = crate::fs::remove_dir_all(dir);
+    crate::fs::create_dir_all(dir).map_err(|_| StoreError::Io)?;
     let limbs: Vec<String> = proof.publics.iter().map(u64::to_string).collect();
     let [payee, change] = sealed;
     let files: [(&str, Vec<u8>); 4] = [
@@ -53,7 +53,7 @@ pub fn write_handoff(
         .iter()
         .map(|(name, body)| {
             let path = dir.join(name);
-            std::fs::write(&path, body).map_err(|_| StoreError::Io)?;
+            crate::fs::write(&path, body).map_err(|_| StoreError::Io)?;
             Ok(path)
         })
         .collect()

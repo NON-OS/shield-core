@@ -7,7 +7,7 @@ pub(super) struct Pending {
     /// The account the review was worked out for.
     pub(super) from: [u8; 20],
     pub(super) tx: crate::evm::tx::Eip1559,
-    pub(super) made: std::time::Instant,
+    pub(super) made: crate::time::Instant,
     /// For a deposit, the note it creates, stored before the deposit leaves.
     pub(super) note: Option<crate::notes::NotePlaintext>,
 }

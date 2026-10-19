@@ -24,7 +24,7 @@ impl NoteLog {
             })?;
         sealed.truncate(n);
         let bytes = frame(counter, &sealed)?;
-        let mut file = std::fs::OpenOptions::new()
+        let mut file = crate::fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(&self.path)

@@ -9,8 +9,8 @@ use crate::error::WalletError;
 use crate::keys::Account;
 use crate::prover::launch::{fixture::transfer, prove::prove_spend};
 use crate::prover::Cancel;
+use crate::time::Instant;
 use std::path::Path;
-use std::time::Instant;
 
 /// Pinned from the v2 package, never read from the proof being judged: shape A's parameter id.
 const V2_PARAMS_ID: &str = "ccba76ed5748b5ee54dfd62935fd1d10998b5c0f84e35a9dc899905cfb1eadb5";
@@ -52,9 +52,9 @@ pub fn bench_launch(
     let out = dir.join("export");
     let bin = out.join("launch-proof.bin");
     let json = out.join("launch-proof.publics.json");
-    let written = std::fs::create_dir_all(&out).is_ok()
-        && std::fs::write(&bin, &proof.bytes).is_ok()
-        && std::fs::write(
+    let written = crate::fs::create_dir_all(&out).is_ok()
+        && crate::fs::write(&bin, &proof.bytes).is_ok()
+        && crate::fs::write(
             &json,
             format!("{{\"n_publics\": 36, \"publics\": [{}]}}\n", publics.join(", ")),
         )

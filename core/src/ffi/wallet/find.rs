@@ -23,7 +23,7 @@ impl Wallet {
         }
         self.searched.store(0, Ordering::Release);
         let tor = self.tor()?;
-        let (history, public) = std::thread::scope(|scope| {
+        let (history, public) = crate::threads::scope(|scope| {
             let history = scope.spawn(|| fetch_history(&tor, &RPCS));
             let first = self.check_public(&tor, &addresses, 0);
             (history.join(), first)
