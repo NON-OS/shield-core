@@ -8,6 +8,8 @@ import { roundAction } from "../ui/round-action.js";
 import { app } from "../state/app.js";
 import { inFlight } from "../state/in-flight.js";
 import { landing } from "./landing.js";
+import { depositReminder } from "../ui/deposit-reminder.js";
+import { readDepositNotes } from "../state/deposit-notes.js";
 
 function caption(balances) {
   const pending = balances.find((b) => b.pending > 0);
@@ -24,6 +26,7 @@ export async function sync() {
   if (!chain) return;
   app.chain = chain;
   app.shielded = chain.balances;
+  await readDepositNotes(app);
   app.draw();
 }
 
@@ -59,6 +62,7 @@ export function shield() {
       coinRow("eth", of("eth")),
     ),
     spendable && meter(app.chain),
+    depositReminder(app),
     app.spend && landing(app.spend),
     h(
       "nav",
@@ -125,4 +129,5 @@ export function shield() {
 shield.enter = async () => {
   app.shielded = await app.call("balances").catch(() => app.shielded);
   app.spend = await inFlight.get(app);
+  await readDepositNotes(app);
 };

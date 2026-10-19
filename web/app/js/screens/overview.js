@@ -6,6 +6,8 @@ import { quiet } from "../ui/quiet.js";
 import { roundAction } from "../ui/round-action.js";
 import { svg } from "../ui/svg.js";
 import { app } from "../state/app.js";
+import { depositReminder } from "../ui/deposit-reminder.js";
+import { readDepositNotes } from "../state/deposit-notes.js";
 import { short } from "../text/short.js";
 
 async function read() {
@@ -102,6 +104,7 @@ export function overview() {
       roundAction("Swap", "swap", () => app.show("swap")),
       roundAction("Shield", "shield", () => app.show("shield")),
     ),
+    depositReminder(app),
     quiet([["Read again", read]]),
   );
 }
@@ -109,4 +112,5 @@ export function overview() {
 /** Read the accounts once, so the pill can name the one in use. */
 overview.enter = async () => {
   app.accounts = await app.call("accounts").catch(() => app.accounts);
+  await readDepositNotes(app);
 };
