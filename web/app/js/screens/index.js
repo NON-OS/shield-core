@@ -23,6 +23,7 @@ import { licences } from "./licences.js";
 import { release } from "./release.js";
 import { wipe } from "./wipe.js";
 import { install } from "./install.js";
+import { swap } from "./swap.js";
 
 export const screens = {
   opening,
@@ -48,4 +49,5 @@ export const screens = {
   release,
   wipe,
   install,
+  swap,
 };
