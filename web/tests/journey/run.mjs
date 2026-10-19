@@ -34,7 +34,10 @@ async function publicAddress(w) {
 
 async function readPool(w) {
   await w.ready();
-  if (!title("Shield").test(await w.page.locator("h1").textContent())) {
+  // The screen a step left may still be drawing, so wait for one of the two a read starts from.
+  const either = w.page.getByRole("heading", { level: 1 }).filter({ hasText: /Shield$|Wallet$/ });
+  await either.waitFor({ timeout: 60_000 });
+  if (!title("Shield").test(await either.textContent())) {
     await w.click("Shield");
     await w.heading("Shield");
   }
