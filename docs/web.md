@@ -52,9 +52,17 @@ account book, written by the core. One thing in it exists nowhere else. A deposi
 where the deposit was made, until it is spent, and the recovery words do not bring an unspent
 deposit back; that is the core's design today, the same in the apps. A browser can clear a site's
 storage on its own, and Safari does after seven days without a visit unless the page has been added
-to the home screen. So the page asks the browser to keep its storage when a wallet is made or
-restored, Settings says whether the browser agreed, and the notice before first use says to add the
-page to the home screen and to spend a deposit on the device that made it.
+to the home screen. So the welcome screen recommends adding the page to the home screen before a
+wallet is made, the page asks the browser to keep its storage when a wallet is made or restored, and
+Settings says whether the browser agreed.
+
+While the active account holds a deposit's note, Home and the shield say how much the words cannot
+bring back, with "Make it recoverable": a private send of a standard amount to the wallet's own
+address. Both notes that send makes, the payment and the change, are sealed to the wallet's key, so
+a restore finds them. The web build reads which notes came from deposits from the store's own
+deposit rows (`core/src/store/deposited.rs`, compiled for wasm32 only). A send uses the smallest
+note that covers it, so with other notes held it may leave the deposit's note in place, and the line
+stays until that note is spent.
 
 ## The network
 

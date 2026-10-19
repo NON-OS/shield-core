@@ -54,6 +54,7 @@ says so. [web.md](web.md) has the reasons.
 | Destroy this wallet | The same |
 | The pool read every five minutes in the background | Every five minutes while the page is open; a closed page reads nothing |
 | Not in the apps | Add to the home screen, check this release, the update prompt, offline opening |
+| Not in the apps | A line on Home and the shield while a deposit's note is unspent, with "Make it recoverable", a private send to the wallet's own address |
 
 Neither app has a history of transactions, transaction details or endpoint settings, and neither
 does the web version. Endpoints the user chooses come in a later release.
