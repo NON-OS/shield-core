@@ -19,6 +19,7 @@ little endian bytes (`keys::material`). No key of one account can be computed fr
 | `spend_pk`, `nk` | Poseidon of `sk`, in the circuit | receive, find spent notes |
 | X-Wing receiving seed | `nox-shield 2026 receive key v1` | opens notes sent to the account |
 | note store key | `nox-shield 2026 note store key v1` | seals the account note log |
+| deposit key | `nox-shield 2026 deposit key v1` | draws each deposit blinding under `shield/deposit/v1`, never exported |
 | public account | BIP-32 at `m/44'/60'/0'/0/i` | the standard account at index i |
 
 Each account keeps its own sealed note log: `notes.log` for account 0 and `notes-i.log` after it.
@@ -30,8 +31,9 @@ same whatever the number of accounts. Calls about one account, to the lander or 
 use circuits no other account uses (`net/tor/account.rs`). The pool scan stays shared.
 
 A restore takes a phrase of 12, 15, 18, 21 or 24 words, so a phrase from any standard wallet comes in. A new
-phrase is always 24 words. After a restore the wallet looks at accounts 1, 2 and on, each for a note
-or any public use on mainnet or Sepolia, and stops after five empty ones in a row
+phrase is always 24 words. After a restore the wallet looks at accounts 1, 2 and on, each for a note,
+a deposit found again from its deposit key ([21-deposit-recovery.md](21-deposit-recovery.md)) or
+any public use on mainnet or Sepolia, and stops after five empty ones in a row
 (`ffi/wallet/find.rs`). It looks at five accounts at once, each over its own circuits, while the
 pool history is fetched, and reports how many it has looked at. On the server, with Tor already
 up, a phrase never used took 12.6 seconds.

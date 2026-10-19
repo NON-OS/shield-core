@@ -172,6 +172,10 @@ size becomes the fewest standard deposits under one review (`core/src/wallet/dep
 after one confirmation, each note stored before its deposit leaves, and the first that fails stops
 the rest (`confirm_shield_split`). For NOX, the exact approval of the whole amount comes first.
 
+The blinding of each deposit is drawn from the seed at a per-account deposit index, so a restore
+from the words finds every deposit again from the leaves the scan already reads. The design, the
+gap limit and the privacy argument are in [21-deposit-recovery.md](21-deposit-recovery.md).
+
 ## The rewards link
 
 The registry on Sepolia, `0xf1DC54d83b21D416ce619fA8C2E29C8381594225`, links a mainnet address

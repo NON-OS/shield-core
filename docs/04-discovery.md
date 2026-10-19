@@ -47,7 +47,9 @@ Then `discovery::scan_chain` tries every `OutputNote`: an X-Wing decapsulation, 
 and on a match the authenticated open and the checks of the plaintext. The last check is one no pool
 can pass for a note belonging to another wallet: the opening must recompute to the leaf the pool
 emitted. Deposits this wallet sent are matched to their leaves by commitment, and a published
-nullifier marks a held note spent.
+nullifier marks a held note spent. Deposits whose blinding was drawn from the seed are also found
+without the store that kept them, by rebuilding each candidate commitment from the deposit key
+([21-deposit-recovery.md](21-deposit-recovery.md)). That search reads nothing beyond these events.
 
 ## The cost
 

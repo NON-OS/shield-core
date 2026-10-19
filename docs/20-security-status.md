@@ -31,6 +31,12 @@ of the project was not reachable from that session, so no number here is a build
 | A typed amount becomes the fewest standard deposits, and every split adds up | `core/src/wallet/deposit_split_test.rs`: every whole number of cents from 0.01 to 100 ETH |
 | The policy takes every split size, and refuses a size that is not standard | `depositFee` on the policy for 0.2, 0.1, 0.05, 0.02 and 10 ETH and five NOX sizes, and `NonStandardAmount` for 0.015 ETH |
 | A batch of deposits goes out on consecutive nonces, one wei short refuses all of it, and a nonce at the top of its range is refused without a panic | `core/src/evm/shield_batch_test.rs` |
+| A deposit made by one wallet is found again by a second restored from the same words, at the same leaf, spendable, and shown spent when its nullifier is published | `core/src/ffi/wallet/sync_each_test.rs`, over a synthetic history, not yet on Sepolia |
+| A deposit with a random blinding, as before this change, is still found from its store and spends | the same file |
+| The recovery search stops `DEPOSIT_GAP` indices past the last deposit found, and finds nothing for another account, pool or chain | `core/src/discovery/deposits_test.rs` |
+| A deposit index is never drawn twice for a kept deposit, across a restart and in any order of keeping | `core/src/wallet/session/deposit_draw_test.rs` |
+| Every deposit blinding word is below p, and every input of the derivation moves it | `core/src/keys/deposit_key_test.rs` |
+| The time of the recovery search on a phone | not measured |
 | The rewards link digest is the digest the registry computes | `domainSeparator()` and `linkDigest` of `0xf1DC…4225`, read live, in `core/src/wallet/rewards/rewards_test.rs` |
 | A link signature is the signature Foundry makes, and its calldata is the calldata Foundry encodes | `cast wallet sign --data` and `cast calldata`, pinned in `rewards_test.rs` and `rewards_calls_test.rs` |
 | The registry takes that link | `link` simulated with `eth_call` from the testnet address on 1 October, for a self link and a link to a second address: no revert |
