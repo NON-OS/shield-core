@@ -68,7 +68,12 @@ async function check(screen) {
 await page.goto(`${base}/`);
 await heading("Before you start");
 await check("warning");
-await click("I understand");
+// The first step by keyboard alone: Tab until the button has focus, then Enter.
+for (let i = 0; i < 20; i++) {
+  await page.keyboard.press("Tab");
+  if ((await page.evaluate(() => document.activeElement?.textContent)) === "I understand") break;
+}
+await page.keyboard.press("Enter");
 await heading("NØNOS");
 await check("welcome");
 await click("Create a wallet");
@@ -106,6 +111,59 @@ await heading("Locked");
 await check("locked");
 await click("Unlock");
 await heading("Wallet");
+
+// Every other screen, for axe and the width, without moving anything.
+const visit = async (from, button, title, back = "Back") => {
+  await click(from);
+  if (button) await click(button);
+  await heading(title);
+  await check(title.toLowerCase());
+  await click(back);
+};
+await click("Send");
+await heading("Send");
+await check("public send");
+await click("Back");
+await heading("Wallet");
+await visit("Shield", "Deposit", "Deposit");
+await heading("Shield");
+await click("Send");
+await heading("Send");
+await check("private send");
+await click("Back");
+await click("Withdraw");
+await heading("Withdraw");
+await check("withdraw");
+await click("Back");
+await heading("Shield");
+await click("Back");
+await heading("Wallet");
+for (const [link, title] of [
+  ["Recovery words and keys", "Keys"],
+  ["Time a proof in this browser", "Time a proof"],
+  ["Check this release", "Check this release"],
+  ["Licences", "Licences"],
+]) {
+  await click("Settings");
+  await page.getByRole("button", { name: link }).click();
+  await heading(title);
+  await check(title.toLowerCase());
+  await click("Back");
+  await heading("Settings");
+  await click("Back");
+  await heading("Wallet");
+}
+await page.getByRole("button", { name: /^Account 1/ }).click();
+await heading("Accounts");
+await check("accounts");
+await click("Back");
+await heading("Wallet");
+await click("Settings");
+await page.getByRole("button", { name: "Destroy this wallet" }).click();
+await heading("Destroy this wallet");
+await check("destroy");
+await click("Keep this wallet");
+await heading("Settings");
 
 console.log(
   JSON.stringify({
