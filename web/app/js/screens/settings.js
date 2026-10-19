@@ -2,6 +2,7 @@ import { frame } from "../ui/frame.js";
 import { facts } from "../ui/facts.js";
 import { quiet } from "../ui/quiet.js";
 import { app } from "../state/app.js";
+import { route } from "../state/route.js";
 import { watchIdle } from "../state/idle.js";
 import { watchInstall } from "../state/install.js";
 import { credits } from "./credits.js";
@@ -15,6 +16,20 @@ const proofText = {
   unable: () => "this browser cannot run the prover",
 };
 
+const tunnelText = {
+  idle: () => "Nym mixnet, starts with the next request",
+  connecting: () => `Nym mixnet, connecting through ${route.gateway}`,
+  ready: () => `Nym mixnet, through ${route.gateway}`,
+  unreachable: () => "Nym mixnet, not reached; the next request tries another gateway",
+};
+
+// Turning Nym off holds until the page is closed, as the prompt's answer does.
+function switchRoute() {
+  route.nym = !route.nym;
+  if (!route.nym) app.tunnel.stop();
+  app.draw();
+}
+
 export function settings() {
   const p = app.proving;
   const idle = watchIdle.options.find(([s]) => s === app.idle)?.[1] ?? "after five minutes";
@@ -25,7 +40,7 @@ export function settings() {
       ["app", app.version],
       ["key held in", "a passkey"],
       ["released", "after you are confirmed"],
-      ["route", "browser, direct"],
+      ["route", route.nym ? tunnelText[route.tunnel]() : "browser, direct, until the page closes"],
       ["lander", "none, you settle each spend"],
       ["private sends", (proofText[p?.state] ?? proofText.unable)(p ?? {})],
       ["threads", p?.threads ? String(p.threads) : "one, the page is not isolated"],
@@ -42,6 +57,7 @@ export function settings() {
           }),
       ],
       [`Lock when idle: ${idle}`, () => watchIdle.cycle()],
+      [`Nym mixnet: ${route.nym ? "on" : "off"}`, switchRoute],
       !installed && app.install && ["Add to the home screen", () => app.install()],
       !installed && !app.install && ["Add to the home screen", () => app.show("install")],
       ["What the web version trusts", () => app.show("warning", { back: "settings" })],

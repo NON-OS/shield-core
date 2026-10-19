@@ -48,7 +48,7 @@ function net(detail) {
   if (detail === "ReplyShape" || detail === "ReplyTooLarge")
     return "A server answered in a form the wallet does not read. Nothing changed.";
   if (detail === "ProxyRefused") return "That service cannot be reached from a browser.";
-  return "The browser could not reach the network. Try again. Nothing was sent.";
+  return "The network could not be reached. Try again. Nothing was sent.";
 }
 
 export function failureText(e) {
