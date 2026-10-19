@@ -10,6 +10,7 @@ mod public_balances;
 mod public_review;
 mod public_sent;
 mod public_shield;
+mod public_swap;
 mod spend_ticket;
 mod watched_summary;
 
@@ -23,5 +24,6 @@ pub use public_balances::public_balances;
 pub use public_review::public_review;
 pub use public_sent::public_sent;
 pub use public_shield::public_shield;
+pub use public_swap::public_swap;
 pub use spend_ticket::spend_ticket;
 pub use watched_summary::watched_summary;
