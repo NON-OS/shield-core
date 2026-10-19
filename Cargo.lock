@@ -2520,6 +2520,7 @@ dependencies = [
  "nonos_seal",
  "nox_prover",
  "nox_shield_core",
+ "rayon",
  "wasm-bindgen",
  "zeroize",
 ]

@@ -16,6 +16,7 @@ wasm-bindgen = "=0.2.128"
 nonos_seal = { workspace = true }
 getrandom = { workspace = true }
 zeroize = { workspace = true }
+rayon = { workspace = true }
 
 # The prover's own browser exports, `prove` and `prove_with_cache`. On this target line, so a
 # native build of the workspace never compiles them.

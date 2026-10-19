@@ -22,4 +22,4 @@ pub use endpoints::endpoint_hosts;
 pub use panic_report::report_panics;
 pub use periodic_cache::periodic_cache;
 pub use periodic_root::periodic_root;
-pub use wallet::{changed_files, load_file, WebWallet};
+pub use wallet::{changed_files, load_file, read_file, WebWallet};
