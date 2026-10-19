@@ -2,7 +2,7 @@
   "name": "shield-web",
   "private": true,
   "type": "module",
-  "description": "Tools that build, check and test the web wallet. Nothing here ships to the browser.",
+  "description": "Tools that build, check and test the web wallet. Of the packages, only the mixnet client ships to the browser.",
   "scripts": {
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
@@ -16,5 +16,8 @@
     "jsqr": "1.4.0",
     "playwright": "1.56.1",
     "prettier": "3.8.1"
+  },
+  "dependencies": {
+    "@nymproject/mix-fetch": "3.0.0"
   }
 }
