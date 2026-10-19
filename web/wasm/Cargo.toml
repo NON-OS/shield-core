@@ -13,11 +13,15 @@ crate-type = ["cdylib", "rlib"]
 nox_shield_core = { path = "../../core", default-features = false }
 nox_prover = { workspace = true }
 wasm-bindgen = "=0.2.128"
+nonos_seal = { workspace = true }
+getrandom = { workspace = true }
+zeroize = { workspace = true }
 
 # The prover's own browser exports, `prove` and `prove_with_cache`. On this target line, so a
 # native build of the workspace never compiles them.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 nox_prover = { workspace = true, features = ["wasm"] }
+getrandom = { workspace = true, features = ["js"] }
 
 [features]
 default = []
