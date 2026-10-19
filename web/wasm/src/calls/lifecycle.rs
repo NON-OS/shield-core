@@ -22,6 +22,7 @@ pub fn call(w: &Wallet, method: &str, a: &Args) -> Answer {
         "wipe" => w.wipe().map(|done| done.to_string()),
         "receivingAddress" => w.receiving_address().map(|s| text(&s)),
         "balances" => w.balances().map(|bs| list(bs.iter().map(balance))),
+        "depositNotes" => w.deposit_notes().map(|bs| list(bs.iter().map(balance))),
         "exportPublicKey" => a.index(0).and_then(|i| w.export_public_key(i)).map(|s| text(&s)),
         _ => return None,
     })

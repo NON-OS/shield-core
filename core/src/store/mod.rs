@@ -18,3 +18,6 @@ mod state;
 pub use log::NoteLog;
 pub use row::Row;
 pub use state::{Balance, StoreState};
+
+#[cfg(target_arch = "wasm32")]
+mod deposited;

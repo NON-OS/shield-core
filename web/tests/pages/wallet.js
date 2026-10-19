@@ -27,6 +27,7 @@ async function run() {
       public: await w.call("publicAddress"),
       balances: await w.call("publicBalances", "sepolia"),
       chain: await w.call("syncChain"),
+      depositNotes: await w.call("depositNotes"),
     };
   }
   const refused = await w

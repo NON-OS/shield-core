@@ -13,6 +13,10 @@ pub struct StoreState {
     pending: BTreeMap<[u64; 4], crate::notes::NotePlaintext>,
     /// Notes held from another pool, marked at each sync and never written.
     pub(super) elsewhere: std::collections::BTreeSet<[u64; 4]>,
+    /// Every deposit this store sent, by commitment, for the web build to say
+    /// which held notes the recovery words cannot bring back.
+    #[cfg(target_arch = "wasm32")]
+    pub(super) deposited: std::collections::BTreeSet<[u64; 4]>,
 }
 
 /// One coin's balance in its note units, split into spendable now and in flight.
@@ -45,6 +49,8 @@ impl StoreState {
             Row::Deposit(plain) => {
                 let cm = crate::notes::commitment(&crate::prover::pool_hasher(), &plain.note());
                 let key = [cm[0].value(), cm[1].value(), cm[2].value(), cm[3].value()];
+                #[cfg(target_arch = "wasm32")]
+                self.deposited.insert(key);
                 if !self.notes.contains_key(&key) {
                     self.pending.insert(key, plain);
                 }
