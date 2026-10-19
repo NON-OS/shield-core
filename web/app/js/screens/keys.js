@@ -2,19 +2,19 @@ import { h } from "../ui/h.js";
 import { frame } from "../ui/frame.js";
 import { button } from "../ui/button.js";
 import { app } from "../state/app.js";
-import { confirmed } from "../device/confirmed.js";
+import { giveKey } from "../device/key.js";
 import { copyThenClear } from "../ui/copy.js";
 
 export function keys() {
   const p = app.params;
   const words = () =>
     app.run(async () => {
-      await confirmed(app);
+      await giveKey(app);
       app.show("keys", { words: await app.call("recoveryWords") });
     });
   const key = () =>
     app.run(async () => {
-      await confirmed(app);
+      await giveKey(app);
       const account = app.accounts?.find((a) => a.active)?.index ?? 0;
       app.show("keys", { key: await app.call("exportPublicKey", account) });
     });

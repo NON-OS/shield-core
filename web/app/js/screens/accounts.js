@@ -3,6 +3,7 @@ import { frame } from "../ui/frame.js";
 import { button } from "../ui/button.js";
 import { app } from "../state/app.js";
 import { short } from "../text/short.js";
+import { giveKey } from "../device/key.js";
 
 export function accounts() {
   const list = app.accounts ?? [];
@@ -45,6 +46,8 @@ export function accounts() {
         "Add an account",
         () =>
           app.run(async () => {
+            // A new account is derived from the seed, so the vault is opened again for it.
+            await giveKey(app);
             await app.call("addAccount");
             app.accounts = await app.call("accounts");
             app.draw();
