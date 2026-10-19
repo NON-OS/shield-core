@@ -54,7 +54,7 @@ once that workflow is enabled again.
 | Harness | What holds for every input |
 |---|---|
 | `an_offer_is_always_one_the_chain_accepts_and_never_overpays` | the fee cap stays under 1,000 gwei, the tip under 5 gwei, and the tip never above the cap |
-| `a_gas_limit_is_never_below_the_estimate_and_ether_stays_near_it` | no gas limit is below the estimate; ether to an address with no code gets at least 21,000 and at most 21,000 above the estimate |
+| `a_gas_limit_is_never_below_the_estimate_and_ether_stays_near_it` | no gas limit is below the estimate or above 2^24; ether to an address with no code gets at least 21,000 and at most 21,000 above the estimate, and an estimate past 1,000,000 is refused |
 | `every_header_announces_its_own_length` | every RLP length prefix decodes back to its length |
 | `every_integer_is_minimal_and_decodes_back` | every RLP integer has no leading zero and decodes back |
 | `what_arrives_and_the_fee_add_up_to_what_was_sent` | a NOX transfer that passes delivers the amount less a fee below it, and a paused or blocked token passes nothing |

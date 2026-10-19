@@ -49,17 +49,32 @@ pub(super) const FLOOR: u128 = 21_000;
 /// The most a plain ether transfer adds to its estimate.
 pub(super) const ETHER_MARGIN: u128 = 21_000;
 
-/// The gas limit from the node's estimate. Ether to an address with no code
-/// gets a tenth on top, at most `ETHER_MARGIN` and never under `FLOOR`: a
-/// fixed 21,000 fails where a transfer that creates an account costs more.
-/// Anything else gets a quarter on top, since a token transfer's cost can move.
+/// The most gas a plain ether transfer may be given. One that creates an
+/// account takes about 207,000; an estimate far above that is a server's error
+/// or a lie, and is refused before it can inflate the fee shown.
+pub(super) const ETHER_CEILING: u128 = 1_000_000;
+
+/// The most gas one transaction may use, EIP-7825's cap of 2^24.
+pub(super) const TX_CAP: u128 = 1 << 24;
+
+/// The gas limit from the node's estimate, or none when it passes a ceiling.
+/// Ether to an address with no code gets a tenth on top, at most
+/// `ETHER_MARGIN` and never under `FLOOR`: a fixed 21,000 fails where a
+/// transfer that creates an account costs more. Anything else gets a quarter
+/// on top, since a token transfer's cost can move. No limit passes `TX_CAP`.
 pub(super) fn limit(estimate: u128, plain_ether: bool) -> Option<u64> {
     let padded = if plain_ether {
+        if estimate > ETHER_CEILING {
+            return None;
+        }
         let margin = estimate.checked_div(10)?.min(ETHER_MARGIN);
         estimate.checked_add(margin)?.max(FLOOR)
     } else {
         estimate.checked_mul(5)?.checked_div(4)?
     };
+    if padded > TX_CAP {
+        return None;
+    }
     u64::try_from(padded).ok()
 }
 
@@ -108,6 +123,15 @@ mod tests {
 
     #[test]
     fn the_margin_on_ether_stops_at_21000() {
+        assert_eq!(limit(900_000, true), Some(921_000));
+    }
+
+    #[test]
+    fn an_estimate_past_a_ceiling_is_refused() {
         assert_eq!(limit(1_000_000, true), Some(1_021_000));
+        assert_eq!(limit(1_000_001, true), None);
+        assert_eq!(limit(50_000_000, true), None);
+        assert_eq!(limit(13_421_773, false), Some(16_777_216));
+        assert_eq!(limit(13_421_774, false), None);
     }
 }
