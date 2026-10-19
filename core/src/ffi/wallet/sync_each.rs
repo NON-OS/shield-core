@@ -1,10 +1,13 @@
 //! Recording what one fetched history holds for each account, own or view-only. Every account
-//! reads the same history, so the network learns nothing of how many there are.
+//! reads the same history, so the network learns nothing of how many there are. An account's
+//! deposits are also searched for from its deposit key, so a restore from the words finds them.
 
-use crate::discovery::{note_commitments, Log};
+use super::deposit_site::active_site;
+use crate::discovery::{note_commitments, spent_commitments, Log};
 use crate::error::WalletError;
-use crate::notes::NoteStatus;
+use crate::notes::{NoteRecord, NoteStatus};
 use crate::store::Row;
+use crate::wallet::deposit_recover::recovered_deposits;
 use crate::wallet::watch::Watched;
 use crate::wallet::{scan_history, scan_history_as, History, Session};
 
@@ -17,15 +20,34 @@ pub(super) fn sync_account(
     let Some(slot) = s.at(index) else { return Ok([0; 3]) };
     let held = slot.state().held();
     let scan = scan_history(history, slot.account(), &slot.state().pending_deposits(), &held);
-    let known: Vec<[u64; 4]> = held.iter().map(|n| n.cm).collect();
-    let fresh = |cm: &[u64; 4]| !known.contains(cm);
-    let received: Vec<_> = scan.received.into_iter().filter(|n| fresh(&n.cm)).collect();
-    let deposited: Vec<_> = scan.deposited.into_iter().filter(|n| fresh(&n.cm)).collect();
-    let found = [count(received.len()), count(deposited.len()), count(scan.spent.len())];
+    let next = slot.state().next_deposit();
+    let (indices, recovered): (Vec<u32>, Vec<NoteRecord>) =
+        recovered_deposits(history, slot.account(), &active_site()?, next).into_iter().unzip();
+    let mut known: Vec<[u64; 4]> = held.iter().map(|n| n.cm).collect();
+    let mut fresh = |n: &NoteRecord| {
+        let new = !known.contains(&n.cm);
+        known.push(n.cm);
+        new
+    };
+    let received: Vec<_> = scan.received.into_iter().filter(&mut fresh).collect();
+    let deposited: Vec<_> =
+        scan.deposited.into_iter().chain(recovered).filter(&mut fresh).collect();
+    // A note found now may be spent already, as after a restore, so its nullifier is checked too.
+    let published: Vec<[u8; 32]> =
+        history.nullifiers.iter().filter_map(|l| l.topics.get(1).copied()).collect();
+    let mut spent = scan.spent;
+    for set in [&received, &deposited] {
+        spent.extend(spent_commitments(slot.account(), set, &published));
+    }
+    let found = [count(received.len()), count(deposited.len()), count(spent.len())];
+    // The highest index found is kept first, so a deposit drawn after this never reuses one.
+    if let Some(last) = indices.into_iter().max() {
+        s.record_to(index, Row::DepositIndex(last))?;
+    }
     for note in received.into_iter().chain(deposited) {
         s.record_to(index, Row::Found(note))?;
     }
-    for cm in scan.spent {
+    for cm in spent {
         s.record_to(index, Row::Status { cm, status: NoteStatus::Spent })?;
     }
     s.mark_pool_at(index, &leaves(history));
@@ -62,3 +84,7 @@ fn leaves(history: &History) -> std::collections::BTreeMap<u64, [u8; 32]> {
 fn count(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(u32::MAX)
 }
+
+#[cfg(test)]
+#[path = "sync_each_test.rs"]
+mod sync_each_test;
