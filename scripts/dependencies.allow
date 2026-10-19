@@ -454,6 +454,7 @@ wasm-bindgen-macro
 wasm-bindgen-macro-support
 wasm-bindgen-shared
 weak-table
+web-sys
 web-time
 web-time-compat
 webpki-roots

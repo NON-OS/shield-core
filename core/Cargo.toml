@@ -47,6 +47,7 @@ webpki-roots = { workspace = true }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { workspace = true, features = ["js"] }
 web-time = "=1.1.0"
+web-sys = { version = "=0.3.105", features = ["XmlHttpRequest"] }
 
 # A grep for unwrap is not a proof that nothing panics. These are the lints
 # that are: an index, a slice range and an arithmetic overflow are the three
