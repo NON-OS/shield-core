@@ -67,7 +67,7 @@ pub fn review(
     };
     let plain = order.coin == Coin::Eth && !contract;
     let Some(gas) = review_checks::gas_limit(at(5)?, plain) else {
-        return Ok(Checked::Refused("The network refused this transfer when it was tried."));
+        return Ok(Checked::Refused(review_checks::no_estimate(plain)));
     };
     let max_network_fee = u128::from(gas).checked_mul(fees.max_fee).ok_or(NetError::ReplyShape)?;
     if let Some(why) = review_checks::afford(order, ether, max_network_fee) {

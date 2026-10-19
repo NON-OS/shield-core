@@ -1,6 +1,6 @@
 //! Proved for every base fee, suggested tip and estimate, not sampled.
 
-use super::{limit, offer, CEILING, MAX_TIP};
+use super::{limit, offer, CEILING, ETHER_MARGIN, FLOOR, MAX_TIP};
 
 /// Whatever an RPC says, an offer never passes the ceiling or the tip cap,
 /// and its tip never exceeds its fee cap, which EIP-1559 requires of a
@@ -16,13 +16,20 @@ fn an_offer_is_always_one_the_chain_accepts_and_never_overpays() {
     }
 }
 
-/// Ether to a person gets 21,000 gas, and anything else never gets less gas
-/// than the estimate asked for.
+/// No gas limit is below the estimate, ether never gets less than 21,000 or
+/// more than the estimate and `ETHER_MARGIN`, and any estimate that fits a
+/// gas limit gives one.
 #[kani::proof]
-fn a_gas_limit_is_exact_for_ether_and_never_below_the_estimate() {
+fn a_gas_limit_is_never_below_the_estimate_and_ether_stays_near_it() {
     let estimate: u128 = kani::any();
-    assert_eq!(limit(estimate, true), Some(21_000));
-    if let Some(gas) = limit(estimate, false) {
+    let plain: bool = kani::any();
+    if let Some(gas) = limit(estimate, plain) {
         assert!(u128::from(gas) >= estimate);
+        if plain {
+            assert!(u128::from(gas) >= FLOOR);
+            assert!(u128::from(gas) <= estimate.max(FLOOR).saturating_add(ETHER_MARGIN));
+        }
+    } else if plain {
+        assert!(estimate.saturating_add(ETHER_MARGIN) > u128::from(u64::MAX));
     }
 }

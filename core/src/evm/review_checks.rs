@@ -61,12 +61,20 @@ pub(super) fn nox_arrival(
     })
 }
 
-/// The gas limit, or none when the estimate says the transfer would fail.
+/// The gas limit, or none when the node gave no estimate, which is how it says
+/// the transfer would fail.
 pub(super) fn gas_limit(estimate: &Answer, plain: bool) -> Option<u64> {
+    super::gas::limit(estimate.quantity().ok()?, plain)
+}
+
+/// Why a send with no gas estimate stops. Ether to a person fails an estimate
+/// only when the node cannot price it, so that one is worth another try.
+pub(super) fn no_estimate(plain: bool) -> &'static str {
     if plain {
-        return super::gas::limit(0, true);
+        "The network could not price this transfer. Nothing was sent; try again."
+    } else {
+        "The network refused this transfer when it was tried."
     }
-    super::gas::limit(estimate.quantity().ok()?, false)
 }
 
 /// Whether the ether on hand covers what the send takes of it.
@@ -115,5 +123,21 @@ pub(super) fn usdc_arrival(
         Answer::Result(_) => Ok(Arrival { arrives: amount, fee: 0, bps: 0 }),
         Answer::Reverted(data) => Err(super::usdc_revert::why(data)),
         Answer::Failed => Err("USDC refused this transfer when it was tried."),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::super::reply::one;
+    use super::*;
+
+    #[test]
+    fn ether_to_a_person_takes_the_estimate_and_stops_without_one() {
+        let fresh = one(r#"{"id":1,"result":"0x32a1f"}"#).unwrap();
+        assert_eq!(gas_limit(&fresh, true), Some(228_130));
+        assert_eq!(gas_limit(&Answer::Failed, true), None);
+        assert_eq!(gas_limit(&Answer::Reverted(Vec::new()), true), None);
+        assert!(no_estimate(true).contains("try again"));
     }
 }
