@@ -45,6 +45,17 @@ that account. A browser without PRF cannot wrap the key at all, and the page the
 wallet rather than fall back to a key in storage. Sends, deposits and showing the recovery words ask
 the passkey to verify the user first, where the apps ask for Face ID or the screen lock.
 
+## What storage holds
+
+The browser's storage holds what a phone keeps on disk: the sealed vault, the note logs and the
+account book, written by the core. One thing in it exists nowhere else. A deposit's note is kept only
+where the deposit was made, until it is spent, and the recovery words do not bring an unspent
+deposit back; that is the core's design today, the same in the apps. A browser can clear a site's
+storage on its own, and Safari does after seven days without a visit unless the page has been added
+to the home screen. So the page asks the browser to keep its storage when a wallet is made or
+restored, Settings says whether the browser agreed, and the notice before first use says to add the
+page to the home screen and to spend a deposit on the device that made it.
+
 ## The network
 
 A browser cannot run Tor, and the page says so before the first request. Each request the core
@@ -106,12 +117,35 @@ style, fonts and workers from the site itself, lets the page compile its own was
 and allows connections to the core's endpoints only. There are no third-party scripts, no analytics
 and no CDN at runtime. Text from a server or a field is always set as text, never parsed as markup.
 
-## Installing
+## Installing and updating
 
-The site has a web manifest and icons, so it can be added to the home screen on iPhone and Android.
-The service worker keeps the release's own files, so the wallet opens without a network. It caches
-no reply from an RPC and none of the wallet's data, which lives sealed in IndexedDB and never passes
-through it. A new release is taken only when every one of its files has arrived.
+The site is an installable web app: a manifest with the apps' name and icon, the dark colours, iOS
+launch images for current iPhones and iPads, and layout inside the safe areas. On iOS it is added
+from Safari's Share sheet; Chrome and Edge offer Install, which Settings also shows.
+
+The service worker keeps one release's files, so the wallet opens without a network, and says on
+screen that it is offline; anything that reads the chain says it needs one. Each file is checked
+against the release manifest's SHA-256 before it is kept, and kept with the headers it was served
+with, so the page stays cross-origin isolated, and the threaded prover keeps working, when it opens
+from the cache. The worker caches no reply from an RPC and none of the wallet's data. Each release is
+a new worker that installs beside the old one and waits: the page shows "Update ready", and only when
+the user takes it does the new release open, with one reload, so two releases never serve one page.
+
+## Locking and reading the pool
+
+As in the apps, the wallet locks after the idle time chosen in Settings, five minutes unless changed,
+and when the page is hidden, unless a proof is running. It reads the pool every five minutes or so
+while the page is open and nothing else runs. A closed page reads nothing; the next open reads the
+pool when the shield is shown.
+
+## The look
+
+The screens are the apps' screens, with their copy, their order and their states, drawn with their
+own tokens: the ink ground, the cyan, Geist and JetBrains Mono, the numbered bar, the recoloured Etna
+photographs, and the round actions with the Android app's glyphs. The photographs are by gnuckx,
+under CC BY 2.0, recoloured by NØNOS, and credited in About as in the apps. Where a browser forces a
+difference, the screen says so: a passkey instead of the Secure Enclave or the Keystore, settling
+from the public account instead of a lander, and the phone proof check.
 
 ## Warnings
 
