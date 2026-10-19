@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "field-kernel", "verified"]
+members = ["core", "field-kernel", "verified", "web/wasm"]
 # The linked crates are dependencies, not members. Without this they would be
 # pulled into the workspace by sitting under its root, and then a workspace
 # wide test or lint would run over another repository's code and fail on its
@@ -71,3 +71,15 @@ strip = "none"
 [profile.bindings]
 inherits = "release"
 strip = "none"
+
+# The browser build. stark_proofs computes `1usize << level` for a pool tree of depth 32, which
+# overflows a 32-bit usize at the root, so with overflow checks on a wasm32 proof stops there. The
+# product is only ever multiplied by index 0 at that level, so the wrapped value gives the same
+# comparison; the fix in the source is asked of the prover's own repository. Proofs from this
+# profile are held to the native bytes on the pinned vector, which is what would show a second
+# wrap that mattered.
+[profile.web]
+inherits = "release"
+
+[profile.web.package.stark_proofs]
+overflow-checks = false
