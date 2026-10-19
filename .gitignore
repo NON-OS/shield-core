@@ -24,3 +24,6 @@ result-*
 ._*
 /fuzz-*.log
 spec/tla2tools.jar
+
+# The browser tests link or install their tools here; none of it is source.
+/web/node_modules
