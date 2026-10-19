@@ -1,0 +1,47 @@
+/* The NØNOS palette in its light form. Cyan is too light to carry text on white, so it only ever
+   fills, behind ink; teal carries the links and the marks that need colour. */
+:root {
+  --ink: #0a0b0d;
+  --paper: #ffffff;
+  --surface: #f3f5f6;
+  --line: #d9dee1;
+  --muted: #545a60;
+  --cyan: #66ffff;
+  --teal: #007c85;
+  --bad: #b3261e;
+  --radius: 14px;
+  --action: 52px;
+  --gutter: 16px;
+  --column: 34rem;
+  --prose: "Geist", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+
+@font-face {
+  font-family: "Geist";
+  src: url("../fonts/Geist-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist";
+  src: url("../fonts/Geist-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist";
+  src: url("../fonts/Geist-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/JetBrainsMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
