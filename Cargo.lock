@@ -2504,6 +2504,7 @@ dependencies = [
  "tokio",
  "tor-rtcompat",
  "uniffi",
+ "web-sys",
  "web-time",
  "webpki-roots",
  "x-wing",
