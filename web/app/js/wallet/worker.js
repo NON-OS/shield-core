@@ -76,6 +76,24 @@ onmessage = async ({ data }) => {
       case "time":
         reply({ ok: await time() });
         break;
+      case "searchStart":
+        wallet.search_start();
+        reply({ ok: "null" });
+        break;
+      case "searchProgress": {
+        // The search writes the accounts it keeps as it ends, so storing follows its result.
+        const found = wallet.search_result();
+        if (found !== undefined && found !== null) await persist();
+        reply({
+          ok: JSON.stringify({ looked: wallet.search_progress(), found: found ?? null }),
+        });
+        break;
+      }
+      case "readFile": {
+        const bytes = core.read_file(data.path);
+        reply({ ok: bytes ? JSON.stringify(Array.from(bytes)) : "null" });
+        break;
+      }
       default:
         reply({
           failure: JSON.stringify({ kind: "Unknown", detail: data.op, text: "unknown operation" }),

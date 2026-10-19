@@ -5,6 +5,8 @@
 mod args;
 mod failure;
 mod files;
+mod read_file;
+mod search;
 
 pub use args::Args;
 
@@ -20,6 +22,7 @@ use wasm_bindgen::JsValue;
 pub struct WebWallet {
     wallet: Arc<Wallet>,
     guard: Arc<PasskeyGuard>,
+    search: search::Search,
 }
 
 #[wasm_bindgen]
@@ -29,7 +32,7 @@ impl WebWallet {
     pub fn new(dir: String) -> Result<WebWallet, JsValue> {
         let guard = Arc::new(PasskeyGuard::default());
         let wallet = Wallet::new(dir, guard.clone()).map_err(failure)?;
-        Ok(WebWallet { wallet, guard })
+        Ok(WebWallet { wallet, guard, search: search::Search::default() })
     }
 
     /// The passkey's PRF output, for the one create, restore or unlock that follows.
@@ -47,3 +50,4 @@ impl WebWallet {
 }
 
 pub use files::{changed_files, load_file};
+pub use read_file::read_file;

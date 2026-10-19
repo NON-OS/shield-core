@@ -50,6 +50,22 @@ export class Wallet {
     return this.#send({ op: "time" });
   }
 
+  /** Start the account search of a restored phrase; `searchProgress` says how far it has got. */
+  searchStart() {
+    return this.#send({ op: "searchStart" });
+  }
+
+  /** How many accounts the search has looked at, and how many it kept once it ends. */
+  searchProgress() {
+    return this.#send({ op: "searchProgress" });
+  }
+
+  /** A file the wallet wrote, as bytes, for a download. */
+  async readFile(path) {
+    const bytes = await this.#send({ op: "readFile", path });
+    return bytes && Uint8Array.from(bytes);
+  }
+
   call(method, ...args) {
     return this.#send({ op: "call", method, args });
   }
