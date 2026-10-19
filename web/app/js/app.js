@@ -24,7 +24,7 @@ app.draw = async () => {
     if (app.screen !== name) return;
   }
   root.replaceChildren(...[screen()].flat(Infinity).filter(Boolean));
-  document.title = `${root.querySelector("h1")?.textContent ?? "NØNOS"} · NØNOS Wallet`;
+  document.title = `${root.querySelector("h1")?.textContent ?? "NØNOS"} · NØNOS`;
   root.querySelector("h1")?.focus();
 };
 
