@@ -3,7 +3,7 @@
 //! nothing about the wallet. A lander waits for the chain's clock when the phone's runs ahead.
 
 use crate::error::{CustodyError, WalletError};
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::time::{SystemTime, UNIX_EPOCH};
 
 /// The pool's grid for the not-before time, in seconds.
 pub const GRID: u64 = 600;

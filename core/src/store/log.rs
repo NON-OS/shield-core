@@ -39,7 +39,7 @@ impl NoteLog {
         key: [u8; 32],
     ) -> Result<(NoteLog, StoreState), StoreError> {
         let path = path.into();
-        let bytes = match std::fs::read(&path) {
+        let bytes = match crate::fs::read(&path) {
             Ok(b) => b,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Vec::new(),
             Err(_) => return Err(StoreError::Io),

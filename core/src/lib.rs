@@ -23,3 +23,8 @@ pub mod store;
 pub mod wallet;
 
 uniffi::setup_scaffolding!();
+
+// Below the scaffolding, so no line above them moves.
+pub mod fs;
+pub mod threads;
+pub mod time;

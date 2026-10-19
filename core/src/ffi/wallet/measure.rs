@@ -29,7 +29,7 @@ impl Wallet {
             return Err(WalletError::Store { source: crate::error::StoreError::Io });
         }
         let path = &self.paths().measurement;
-        std::fs::write(path, text)
+        crate::fs::write(path, text)
             .map_err(|_| WalletError::Store { source: crate::error::StoreError::Io })?;
         Ok(path.to_string_lossy().into_owned())
     }

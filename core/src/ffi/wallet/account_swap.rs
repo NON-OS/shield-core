@@ -11,7 +11,7 @@ use crate::evm::{self, Network};
 use crate::ffi::account_types::PublicSwap;
 use crate::ffi::amount_read::parse_units;
 use crate::net::asset::Coin;
-use std::time::Instant;
+use crate::time::Instant;
 
 #[uniffi::export]
 impl Wallet {

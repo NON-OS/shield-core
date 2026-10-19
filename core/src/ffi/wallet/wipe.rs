@@ -22,8 +22,8 @@ impl Wallet {
         remove(&self.paths().watching)?;
         remove_watched_logs(&self.paths().notes)?;
         remove(&self.paths().measurement)?;
-        if self.paths().account.exists() {
-            std::fs::remove_dir_all(&self.paths().account)
+        if crate::fs::exists(&self.paths().account) {
+            crate::fs::remove_dir_all(&self.paths().account)
                 .map_err(|_| WalletError::Store { source: crate::error::StoreError::Io })?;
         }
         Ok(existed)
@@ -33,7 +33,7 @@ impl Wallet {
 /// Every view-only log beside the note log, found by its name.
 fn remove_watched_logs(notes: &std::path::Path) -> Result<(), WalletError> {
     let Some(dir) = notes.parent() else { return Ok(()) };
-    let Ok(entries) = std::fs::read_dir(dir) else { return Ok(()) };
+    let Ok(entries) = crate::fs::read_dir(dir) else { return Ok(()) };
     for entry in entries.flatten() {
         let name = entry.file_name();
         if name.to_string_lossy().starts_with("notes-v") {
@@ -45,9 +45,9 @@ fn remove_watched_logs(notes: &std::path::Path) -> Result<(), WalletError> {
 
 /// Remove a file this app wrote, absent counting as done. A file that stays is a failure.
 fn remove(path: &std::path::Path) -> Result<(), WalletError> {
-    if !path.exists() {
+    if !crate::fs::exists(path) {
         return Ok(());
     }
-    std::fs::remove_file(path)
+    crate::fs::remove_file(path)
         .map_err(|_| WalletError::Store { source: crate::error::StoreError::Io })
 }

@@ -46,6 +46,7 @@ webpki-roots = { workspace = true }
 # A browser has no randomness source getrandom knows by default; there it asks Web Crypto.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { workspace = true, features = ["js"] }
+web-time = "=1.1.0"
 
 # A grep for unwrap is not a proof that nothing panics. These are the lints
 # that are: an index, a slice range and an arithmetic overflow are the three

@@ -8,8 +8,8 @@ use crate::error::{NetError, WalletError};
 use crate::evm::shield::{review_shield, ShieldChecked, ShieldOrder};
 use crate::evm::{self, checksummed, Network};
 use crate::net::tor::Tor;
+use crate::time::Instant;
 use crate::wallet::rewards::{counts_from, LinkState, REGISTRY_BYTES};
-use std::time::Instant;
 
 impl Wallet {
     pub(super) fn review_call(

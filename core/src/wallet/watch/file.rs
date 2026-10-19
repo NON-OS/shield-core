@@ -14,7 +14,7 @@ const TAG: usize = 16;
 
 /// The view key texts in the file, or none when there is no file.
 pub(crate) fn read(path: &Path, key: &[u8; 32]) -> Result<Vec<Zeroizing<String>>, StoreError> {
-    let blob = match std::fs::read(path) {
+    let blob = match crate::fs::read(path) {
         Ok(b) => b,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
         Err(_) => return Err(StoreError::Io),
@@ -45,6 +45,6 @@ pub(crate) fn write(path: &Path, key: &[u8; 32], keys: &[&str]) -> Result<(), St
     blob.extend_from_slice(&body);
     blob.extend_from_slice(&tag);
     let side = path.with_extension("new");
-    std::fs::write(&side, blob).map_err(|_| StoreError::Io)?;
-    std::fs::rename(side, path).map_err(|_| StoreError::Io)
+    crate::fs::write(&side, blob).map_err(|_| StoreError::Io)?;
+    crate::fs::rename(side, path).map_err(|_| StoreError::Io)
 }

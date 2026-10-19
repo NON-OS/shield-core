@@ -28,14 +28,14 @@ impl Vault {
 
     /// Whether a vault is already stored here.
     pub fn exists(&self) -> bool {
-        Path::new(&self.path).exists()
+        crate::fs::exists(Path::new(&self.path))
     }
 
     pub(super) fn read_blob(&self) -> Result<Vec<u8>, CustodyError> {
-        std::fs::read(&self.path).map_err(|_| CustodyError::VaultShape)
+        crate::fs::read(&self.path).map_err(|_| CustodyError::VaultShape)
     }
 
     pub(super) fn write_blob(&self, blob: &[u8]) -> Result<(), CustodyError> {
-        std::fs::write(&self.path, blob).map_err(|_| CustodyError::VaultShape)
+        crate::fs::write(&self.path, blob).map_err(|_| CustodyError::VaultShape)
     }
 }

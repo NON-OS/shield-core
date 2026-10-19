@@ -19,7 +19,7 @@ fn file(dir: &Path) -> PathBuf {
 
 impl Book {
     pub(crate) fn read(dir: &Path) -> Book {
-        let text = std::fs::read_to_string(file(dir)).unwrap_or_default();
+        let text = crate::fs::read_to_string(file(dir)).unwrap_or_default();
         let mut parts = text.split_whitespace().map(str::parse::<u32>);
         let count = match parts.next() {
             Some(Ok(n)) if (1..=MAX_ACCOUNTS).contains(&n) => n,
@@ -35,9 +35,9 @@ impl Book {
     /// Written to a side file and renamed over the old one, so a crash leaves one or the other.
     pub(crate) fn write(self, dir: &Path) -> Result<(), WalletError> {
         let io = |_| WalletError::Store { source: StoreError::Io };
-        std::fs::create_dir_all(dir).map_err(io)?;
+        crate::fs::create_dir_all(dir).map_err(io)?;
         let side = file(dir).with_extension("new");
-        std::fs::write(&side, format!("{} {}\n", self.count, self.active)).map_err(io)?;
-        std::fs::rename(side, file(dir)).map_err(io)
+        crate::fs::write(&side, format!("{} {}\n", self.count, self.active)).map_err(io)?;
+        crate::fs::rename(side, file(dir)).map_err(io)
     }
 }

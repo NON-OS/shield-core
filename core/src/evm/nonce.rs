@@ -17,7 +17,7 @@ fn file(dir: &Path, network: Network, of: &[u8; 20]) -> PathBuf {
 
 /// This device's recent sends on `network`: each nonce with its hash.
 pub(crate) fn recorded(dir: &Path, network: Network, of: &[u8; 20]) -> Vec<(u64, [u8; 32])> {
-    let text = std::fs::read_to_string(file(dir, network, of)).unwrap_or_default();
+    let text = crate::fs::read_to_string(file(dir, network, of)).unwrap_or_default();
     text.lines().filter_map(line).collect()
 }
 
@@ -49,11 +49,11 @@ pub(crate) fn record(
         .collect();
     let path = file(dir, network, of);
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
+        crate::fs::create_dir_all(parent)?;
     }
     let side = path.with_extension("new");
-    std::fs::write(&side, text)?;
-    std::fs::rename(side, path)
+    crate::fs::write(&side, text)?;
+    crate::fs::rename(side, path)
 }
 
 #[cfg(test)]

@@ -12,7 +12,7 @@ const PROOF_LEN: core::ops::RangeInclusive<usize> = 80_000..=110_000;
 const LIMBS: usize = 37;
 
 pub(super) fn read(dir: &Path, name: &str) -> Result<Vec<u8>, WalletError> {
-    std::fs::read(dir.join(name)).map_err(|_| StoreError::Io.into())
+    crate::fs::read(dir.join(name)).map_err(|_| StoreError::Io.into())
 }
 
 /// The JSON for `POST /v1/handoff`, from the hand-off in `dir`.

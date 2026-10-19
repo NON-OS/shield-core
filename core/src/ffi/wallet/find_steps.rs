@@ -22,7 +22,7 @@ impl Wallet {
     ) -> Result<Vec<bool>, WalletError> {
         let batch =
             addresses.get(from..addresses.len().min(from.saturating_add(STEP))).unwrap_or(&[]);
-        std::thread::scope(|scope| {
+        crate::threads::scope(|scope| {
             let runs: Vec<_> = (from..)
                 .zip(batch)
                 .map(|(k, address)| {

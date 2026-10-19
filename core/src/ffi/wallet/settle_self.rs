@@ -10,7 +10,7 @@ use crate::evm::{self, Network};
 use crate::ffi::evm::parse_evm_address;
 use crate::ffi::PublicShield;
 use crate::net::pool::ACTIVE;
-use std::time::Instant;
+use crate::time::Instant;
 
 #[uniffi::export]
 impl Wallet {

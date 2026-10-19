@@ -11,9 +11,9 @@ use crate::ffi::amount_read::parse_base_units;
 use crate::ffi::evm::parse_evm_address;
 use crate::net::asset::Coin;
 use crate::net::pool::{ACTIVE, RPCS};
+use crate::time::Instant;
 use crate::wallet::deposit_split::pieces;
 use crate::wallet::{check_deposit, prepare_deposit, read_pool_state_checked, DepositRequest};
-use std::time::Instant;
 
 #[uniffi::export]
 impl Wallet {

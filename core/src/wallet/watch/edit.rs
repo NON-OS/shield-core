@@ -25,7 +25,7 @@ impl Watching {
         }
         let gone = self.list.remove(i);
         self.save()?;
-        match std::fs::remove_file(self.log_path(&gone.text)) {
+        match crate::fs::remove_file(self.log_path(&gone.text)) {
             Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(StoreError::Io.into()),
             _ => Ok(()),
         }
