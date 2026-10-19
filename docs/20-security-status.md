@@ -32,11 +32,17 @@ of the project was not reachable from that session, so no number here is a build
 | The policy takes every split size, and refuses a size that is not standard | `depositFee` on the policy for 0.2, 0.1, 0.05, 0.02 and 10 ETH and five NOX sizes, and `NonStandardAmount` for 0.015 ETH |
 | A batch of deposits goes out on consecutive nonces, one wei short refuses all of it, and a nonce at the top of its range is refused without a panic | `core/src/evm/shield_batch_test.rs` |
 | A deposit made by one wallet is found again by a second restored from the same words, at the same leaf, spendable, and shown spent when its nullifier is published | `core/src/ffi/wallet/sync_each_test.rs`, over a synthetic history, not yet on Sepolia |
-| A deposit with a random blinding, as before this change, is still found from its store and spends | the same file |
-| The recovery search stops `DEPOSIT_GAP` indices past the last deposit found, and finds nothing for another account, pool or chain | `core/src/discovery/deposits_test.rs` |
-| A deposit index is never drawn twice for a kept deposit, across a restart and in any order of keeping | `core/src/wallet/session/deposit_draw_test.rs` |
-| Every deposit blinding word is below p, and every input of the derivation moves it | `core/src/keys/deposit_key_test.rs` |
+| Two devices on the same words depositing one amount at one index leave two notes, which each device and a restore hold, and spending one leaves the other | `one_commitment_at_two_leaves_is_two_deposits_everywhere` in the same file, and `one_commitment_at_two_leaves_is_two_notes` in `core/tests/store.rs` |
+| A status row of the older kind, by commitment alone, still reads for every note under it | `core/tests/store.rs` |
+| A deposit made after more unpaid tickets than the search window is still found by a restore | `a_deposit_after_many_unpaid_tickets_comes_back` in `core/src/ffi/wallet/sync_each_test.rs` |
+| A deposit with a random blinding, as before this change, is still found from its store and held as spendable with its stored blinding | the same file. No test makes a proof that spends one |
+| The recovery search stops `DEPOSIT_GAP` indices past the last deposit found, finds nothing for another account, pool or chain, finds one commitment at two leaves twice, and from kept candidates hashes nothing again | `core/src/discovery/deposits_test.rs` |
+| A kept deposit index is never drawn again, across a restart and in any order of keeping, reviews drawn from eight threads at once never share an index, and a yes is refused when its index was taken since its review | `core/src/wallet/session/deposit_draw_test.rs` |
+| A deposit at a pool fee above what the search tries is refused before review | `a_fee_above_the_search_is_refused` in `core/tests/deposit.rs` |
+| Every deposit blinding word is below p, every input of the derivation moves it, and four vectors hold | `core/src/keys/deposit_key_test.rs` |
+| The time of the recovery search in a release build | `time_the_deposit_search` in `core/src/discovery/deposits_test.rs`, on 19 October on the 4-core server named above while other builds ran: 13 ms to 15 ms per index, under 1 s for the first sync of an account, about 1 ms for a later one |
 | The time of the recovery search on a phone | not measured |
+| Two reviews on one device given the same index through the wallet's public calls, rather than the session they share | not tested: the guarantee is the session lock, which the thread test exercises |
 | The rewards link digest is the digest the registry computes | `domainSeparator()` and `linkDigest` of `0xf1DC…4225`, read live, in `core/src/wallet/rewards/rewards_test.rs` |
 | A link signature is the signature Foundry makes, and its calldata is the calldata Foundry encodes | `cast wallet sign --data` and `cast calldata`, pinned in `rewards_test.rs` and `rewards_calls_test.rs` |
 | The registry takes that link | `link` simulated with `eth_call` from the testnet address on 1 October, for a self link and a link to a second address: no revert |

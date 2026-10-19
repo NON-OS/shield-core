@@ -21,21 +21,30 @@ Each deposit blinding is now drawn from the seed.
 1. Every account derives a deposit key, 32 bytes, from its key material under the BLAKE3 context
    `nox-shield 2026 deposit key v1`, as it derives its view key and its store key
    (`keys/deposit_key.rs`). It lives in the account while the wallet is unlocked, wipes on drop,
-   prints as `DepositKey(redacted)` and never crosses the FFI.
-2. The blinding of deposit index i is four field words drawn under the context `nox-shield 2026 deposit blinding v1`
-   from the deposit key, the chain id (8 bytes, little endian), the pool address (20 bytes), the
-   account index (4 bytes, little endian) and i (4 bytes, little endian). The draw is the field key
-   draw the spend secret uses: 128 bytes of BLAKE3 output through the rejection sampler of the
-   prover, so every word is below p and no two indices share a commitment by reduction.
-3. The index is counted per account. The first free index is one past the highest index any kept
-   deposit used, read from a new row of the sealed note log of the account, `DepositIndex`, kind 5
-   (`store/row/mod.rs`). The row is written before the deposit row, and both before the transaction
-   leaves, so a crash between them wastes an index and never reuses one.
-4. A review draws its indices without writing them. A single deposit review passes over the indices
-   a held split review has drawn, and a split review passes over the index a held single review has
-   drawn, so the two reviews that can be alive at once never carry the same blinding
-   (`ffi/wallet/deposit_held.rs`). The index is written when the owner confirms. A deposit made for
-   another wallet (`prepare_deposit`) writes it at once, since its note is kept at once.
+   prints as `DepositKey(redacted)` and never crosses the FFI. A copy, which a search running
+   without the session lock holds, wipes on drop the same way.
+2. The blinding of deposit index i is four field words drawn under the context
+   `nox-shield 2026 deposit blinding v1` from the deposit key, the chain id (8 bytes, little
+   endian), the pool address (20 bytes), the account index (4 bytes, little endian) and i (4 bytes,
+   little endian). The draw is the field key draw the spend secret uses: 128 bytes of BLAKE3 output
+   through the rejection sampler of the prover, so every word is below p and no two indices share a
+   commitment by reduction.
+3. The indices used are kept per account in the sealed note log of the account, as a row of kind 5,
+   `DepositIndex` (`store/row/mod.rs`). The row is written before the deposit row, and both before
+   the transaction leaves, so a crash between them wastes an index and never reuses one.
+4. A draw takes the lowest indices that are neither used nor reserved, and reserves them, in one
+   step under the session lock (`wallet/session/deposit_draw.rs`). A reservation lasts five minutes
+   or until the review holding it is replaced, whichever comes first (`ffi/wallet/deposit_held.rs`).
+   So two reviews alive at once on one device do not hold the same index, whichever threads they
+   run on. If a reservation runs out under a review slower than five minutes and its index is drawn
+   again, the second yes for that index is refused, as the next point says.
+5. A review's index is written when the owner confirms, and Tor is reached first, so a confirm that
+   cannot reach the network writes nothing. The confirm is refused as expired when a deposit kept or
+   found since the review has taken its index, for example when a sync has found the deposit of
+   another device on the same words at that index.
+6. `prepare_deposit` returns the transactions for a deposit from the user's own outside wallet into
+   this wallet. Its note must be kept before the ticket is shown, so it draws and keeps its index in
+   one step under the session lock.
 
 The other secret a deposit note carries is its spend key, which is the public `spend_pk` of the
 account. Value and asset are public. The blinding is the only secret, and it is now a function of
@@ -44,50 +53,92 @@ the words.
 ## Finding deposits again
 
 At every sync, and for each account the account search reaches after a restore
-(`ffi/wallet/find_steps.rs`), the core runs `discovery::recover_deposits` over the leaves it has
-already read:
+(`ffi/wallet/find_steps.rs`), the core searches the leaves it has already read
+(`discovery/deposits.rs`, `ffi/wallet/deposit_search.rs`):
 
-1. For each index from the first free one, it draws the blinding and computes the owner digest
+1. What the search needs, a copy of the deposit key and the spend key, is taken from the session in
+   one short call. The hashing then runs without the session lock.
+2. For each index from 0, it draws the blinding and computes the owner digest
    `compress(spend_pk, blinding)` once.
-2. For each value a deposit can hold, it computes the commitment `compress(public, owner)` and looks
-   it up among the `NoteCommitted` leaves. A deposit is a standard size of a pool asset, 1, 2 or 5
-   followed by zeros inside the range of the pool, less the deposit fee rounded down, so the set is
-   public and small: 10 ETH sizes and 12 NOX sizes on the production pool, each at every fee from 0
-   to 100 basis points (`MOST_DEPOSIT_FEE_BPS`), 2,222 values in all.
-3. A match is a deposit of this account. It is recorded as a held note with its leaf, after a
-   `DepositIndex` row for the highest index found, so the next deposit draws past it.
-4. The nullifier of every note found in this sync is checked against the `NullifierSpent` history
+3. For each value a deposit can hold, it computes the commitment `compress(public, owner)`. A
+   deposit is a standard size of a pool asset, 1, 2 or 5 followed by zeros inside the range of the
+   pool, less the deposit fee rounded down, so the set is public and small: 10 ETH sizes and 12 NOX
+   sizes on the production pool, each at every fee from 0 to 100 basis points
+   (`MOST_DEPOSIT_FEE_BPS`), 2,222 values in all. A deposit at a higher fee would never be found,
+   so the core refuses one before review, although the contract would take it
+   (`wallet/deposit_gate.rs`).
+4. The first four bytes of each commitment are kept per account until the wallet locks, so a later
+   sync hashes only the indices past those already kept. The pool's leaves are read once per sync
+   for every account, and each sync compares the kept prefixes against them. A prefix that matches
+   is checked against the whole commitment before it counts.
+5. A match is a deposit of this account. Every leaf holding that commitment is a deposit of its own.
+   Each is recorded as a held note at its leaf, after a `DepositIndex` row for each index found that
+   was not yet used, so no later draw takes it and a review that drew it before the sync is refused
+   at its yes.
+6. The nullifier of every note found in this sync is checked against the `NullifierSpent` history
    at once, so a deposit spent before the restore shows as spent after the first sync. The same
    check now covers received notes found in the same sync, which before waited for a second sync.
 
-The search stops after `DEPOSIT_GAP` indices in a row find nothing.
+The search starts at index 0 every time, because a hole below the highest index used can be filled
+later, by this device or by another one on the same words. It stops after `DEPOSIT_GAP` indices in
+a row find nothing.
+
+## Notes keyed by commitment and leaf
+
+Two deposits of one amount drawn at one index have the same commitment. That happens when two
+devices on the same words each deposit at an index neither has seen used, and when an index is
+taken again as the next section describes. The pool stores each at its own leaf, and each is a note
+with its own nullifier, since the nullifier hashes the leaf.
+
+The store therefore keeps notes by commitment and leaf (`store/state.rs`). A status row now names
+the leaf as well, in a new row kind, 6. A status row of the older kind 2 names only a commitment and
+still reads, for every note held under it, which is what it meant when one commitment was one note.
 
 ## The gap limit
 
-`DEPOSIT_GAP` is 24 (`discovery/deposits.rs`), in the spirit of the 20 empty addresses of BIP-44.
-An index leaves no leaf in two ways.
+`DEPOSIT_GAP` is 64 (`discovery/deposits.rs`), in the spirit of the 20 empty addresses of BIP-44. A
+run of indices with no leaf has three sources:
 
-A review drawn and never confirmed writes nothing, so its indices are drawn again later, unless a
-deposit confirmed meanwhile has moved past them. The most that can be passed over this way is what
-the reviews alive at once hold: one split of up to 20 deposits and one single deposit, 21 indices,
-which the gap passes (a test pins `DEPOSIT_GAP > MAX_PIECES + 1`). The rest of a split that stops
-at its first failed send was never written either.
+- Indices reserved by reviews not yet confirmed. At most one split of up to 20 deposits and one
+  single deposit are held at once, 21 indices, and an abandoned review frees its indices when it is
+  replaced or after five minutes, after which a draw takes them again.
+- Indices kept for a deposit that never lands: a ticket from `prepare_deposit` never paid, or a
+  confirmed deposit whose send failed. Each writes its index, and the index stays empty.
+- Indices kept for deposits sent and not yet seen by a sync, up to 20 for a split.
 
-A confirmed deposit whose send fails has written its index, and that index stays empty. Nothing
-bounds a run of those. A deposit that follows more than 24 failed sends in a row is not found by a
-restore, though the device that made it still holds it. Raising the constant costs one more index
-of hashing per sync and needs no change to any stored format.
+The second source used to be unbounded: 24 unpaid tickets in a row, with the old gap of 24, hid every
+later deposit from a restore. A kept index now counts as seen once a held note carries its blinding.
+Once `MOST_UNSEEN`, 8, kept indices are not seen, a draw takes the lowest of them again instead of a
+new index (`wallet/session/deposit_draw.rs`). The empty run therefore stays near 21 reserved plus 8
+unseen plus 20 in flight, and a test pins `DEPOSIT_GAP` above twice 21 plus 8. A test also makes
+72 unpaid tickets and then a deposit that lands, and a restore finds it.
+
+Taking an index again has a cost. If the earlier ticket is paid after all, both deposits at that
+index land, both are found, and both are spendable, but they carry the same owner digest on chain,
+so an observer can tell they belong together. With the same amount they also carry the same
+commitment. A device that does not sync counts its landed deposits as unseen too, so after 8
+deposits without a sync it takes indices again with the same cost.
+
+Raising `DEPOSIT_GAP` costs one more index of hashing at the first sync of each account after an
+unlock, and nothing at later syncs. It needs no change to any stored format.
 
 ## Cost
 
-Per index tried: one BLAKE3 draw and 2,223 Poseidon compressions, one for the owner digest and one
-per value. A sync of an account with nothing new tries 24 indices, 53,352 compressions. A restore
-tries the indices up to its last deposit plus 24. The account search after a restore tries at
-least five accounts this way, so it hashes at least five times that. Only the unoptimised test
-build has been timed: there a Poseidon compression took 112 µs on a 4-core server, 10,000 in
-1.12 s, so one idle sync of one account is about 6 s of hashing in that build. An optimised build
-is many times faster, and neither a release nor a phone figure has been measured. The number to
-take before a release is the time of one idle sync per account on the slowest supported phone.
+Per index: one BLAKE3 draw and 2,223 Poseidon compressions, one for the owner digest and one per
+value. Measured with `time_the_deposit_search` in `discovery/deposits_test.rs`, built in release
+on a 4-core Intel Xeon at 2.10 GHz that was running other builds at the same time (load near 5):
+
+| | Time |
+|---|---|
+| One index hashed | 13.4 ms to 15.3 ms |
+| First sync of an account with no deposits, 64 indices | 0.86 s to 0.98 s |
+| A later sync from the kept candidates, against 10,000 leaves | 1.1 ms to 1.3 ms |
+| Reading 10,000 leaves once per sync | 2.5 ms to 3.1 ms |
+
+The kept candidates take 4 bytes per value per index, about 570 KB for an account searched to
+index 64. The account search after a restore searches at least five accounts, so about 5 s of
+hashing at these rates, outside the session lock. No phone has been measured. The number to take
+before a release is the first sync of one account on the slowest supported phone.
 
 ## What an observer learns
 
@@ -104,29 +155,33 @@ avoids all three.
 
 On chain a deposit looks as it did. The calldata of `absorb` carries the owner digest, which is a
 Poseidon compression of the spend key and the blinding and shows neither. The blinding is uniform
-to anyone without the deposit key, as a random one was. Two deposits of one account have unrelated
-blindings, since each index is a separate draw.
+to anyone without the deposit key, as a random one was. Two deposits of one account at different
+indices have unrelated blindings, since each index is a separate draw. Two at one index do not, as
+the gap limit section says.
 
 What changes is who can find the deposits. Anyone with the words could already spend everything the
 wallet holds. They can now also find the deposits, which is the purpose. The deposit key, if it
 leaked from memory without the rest, would let its holder recognise the deposits of the account
-among the leaves, as a copy of the note store with its key would. It is never written, exported or
-shown.
+among the leaves, as a copy of the note store with its key would. The kept candidate prefixes would
+let their holder pick out likely deposits of the account the same way. Neither is written,
+exported or shown, and both are dropped when the wallet locks.
 
 ## Compatibility
 
 Notes made before this change keep their random blinding. They stay in the store as deposit and
 found rows and are matched as before: a pending deposit is recognised from its stored plaintext,
-and a held note spends as any other. They are not found by a restore from the words, as before. A
-test pins that such a note is still found from its store and spends (`ffi/wallet/sync_each_test.rs`).
+and a held note is offered for spending as any other. They are not found by a restore from the
+words, as before. A test pins that such a note is still found from its store and held as spendable
+with its stored blinding (`ffi/wallet/sync_each_test.rs`). No test makes a proof spending it.
 
 The first deterministic deposit of an existing wallet is index 0, since an older store holds no
 `DepositIndex` row. No old deposit used an index, so nothing repeats.
 
-The vault is unchanged. The note log gains one row kind, which older stores do not contain, so every
-existing store reads as before. A store written by this build and then opened by an older build is
-refused at the first `DepositIndex` row as a store from a newer version, as the store refuses every
-unknown kind. Downgrading the app after a deposit therefore needs a restore from the words.
+The vault is unchanged. The note log gains two row kinds, 5 and 6, which older stores do not
+contain, so every existing store reads as before, its status rows included. A store written by this
+build and then opened by an older build is refused at the first row of either kind as a store from
+a newer version, as the store refuses every unknown kind. Downgrading the app after a deposit, a
+spend or a sync that marks a note spent therefore needs a restore from the words.
 
 The derivation is new and touches no other key: account vectors, view keys, addresses and the
 public accounts are byte for byte as before (`keys/accounts_vectors.rs` passes unchanged).
@@ -138,6 +193,11 @@ same. What changes is behaviour behind the same calls:
 
 - `prepare_deposit`, `review_shield` with `confirm_public_send`, and `review_shield_split` with
   `confirm_shield_split` make notes with derived blindings.
+- `confirm_public_send` can answer that the review expired when a sync since the review found a
+  deposit at its index, and `confirm_shield_split` then stops at that deposit, with the ones before
+  it sent and the reason in `stopped`, or answers expired when it is the first. The shell reviews
+  again, as for any expired review.
+- A pool fee above 100 basis points is refused with its own sentence before review.
 - `sync_chain` also reports recovered deposits in `deposited`, and may report more in `spent` on the
   first sync after a restore.
 - `find_accounts` counts an account whose only use is a deposit, for example one made from an outside
@@ -146,11 +206,12 @@ same. What changes is behaviour behind the same calls:
 ## What it changes in the native library
 
 New files: `keys/deposit_key.rs`, `keys/deposit_site.rs`, `discovery/deposits.rs`,
-`discovery/deposit_values.rs`, `wallet/deposit_recover.rs`, `wallet/session/deposit_draw.rs`,
-`ffi/wallet/deposit_held.rs` and `ffi/wallet/deposit_site.rs`. Changed: the account holds a deposit
-key, the store folds the new row, `prepare_deposit_at` takes the blinding, and the deposit reviews,
-confirmations and the per-account sync use them. No new dependency: the derivation is the BLAKE3
-key derivation and the rejection sampler the core already uses.
+`discovery/deposit_values.rs`, `wallet/session/deposit_draw.rs`, `ffi/wallet/deposit_held.rs`,
+`ffi/wallet/deposit_search.rs` and `ffi/wallet/deposit_site.rs`. Changed: the account holds a
+deposit key, the store keeps notes by commitment and leaf and folds the two new rows,
+`prepare_deposit_at` takes the blinding, the deposit gate refuses a fee above the search, and the
+deposit reviews, confirmations, the sync and the account search use them. No new dependency: the
+derivation is the BLAKE3 key derivation and the rejection sampler the core already uses.
 
 ## Vectors
 
@@ -167,10 +228,10 @@ is its four words in order, each as sixteen hex digits.
 
 ## Open points
 
-Two devices restored from the same words and depositing at the same time draw the same indices. A
-second deposit of the same amount at the same index would have the same commitment as the first. A
-sync on either device moves its index past the other device's deposits once they are on chain, so
-the window is the time between the two deposits and the next sync.
+Two devices on the same words can draw the same index when neither has synced the other's deposit.
+Both deposits land and both are found and spendable, as the section on notes keyed by commitment
+and leaf says, but they show the same owner digest on chain. A review is refused at its yes only
+when its device has already synced the other deposit.
 
 A view key does not carry the deposit key, so a view-only account still sees received notes and no
 deposits, as before.
