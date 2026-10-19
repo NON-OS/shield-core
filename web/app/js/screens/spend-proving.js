@@ -3,6 +3,7 @@ import { button } from "../ui/button.js";
 import { facts } from "../ui/facts.js";
 import { app } from "../state/app.js";
 import { inFlight } from "../state/in-flight.js";
+import { unanchored } from "../text/unanchored.js";
 
 async function run(p) {
   try {
@@ -18,7 +19,7 @@ async function run(p) {
       return;
     }
     app.show("spend", { ...p, proving: false, running: null });
-    app.fail(e);
+    app.fail(unanchored(e, app.shielded, p.coin, p.amount, app.relayFees?.[p.coin]) ?? e);
   }
 }
 
