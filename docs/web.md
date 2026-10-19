@@ -55,6 +55,11 @@ Content Security Policy allows connections to those hosts and to no other, so a 
 a changed file cannot quietly send requests elsewhere. No request goes to a NØNOS server. Endpoints
 the user chooses come in a later release, with a policy that lists them.
 
+Of the nine hosts, the two thirdweb ones answer an unauthenticated request with a rate-limit notice
+and no CORS header, so a browser drops their reply; natively the same notice is a reply the core
+cannot read. Neither is first in any list, and the core moves to the next host when one fails, so a
+read or a send goes through another endpoint.
+
 The host of the page and Cloudflare, which serves it, see the IP address of everyone who loads the
 page, and when. For IP privacy the answer is Tor Browser. Its higher security levels can turn off
 JavaScript or WebAssembly, which the wallet cannot run without.
