@@ -9,8 +9,13 @@ export function install() {
       number: "04",
       title: "Add to the home screen",
       backdrop: "settings",
-      back: () => app.show("settings"),
+      back: () => app.show(app.params.back ?? "settings"),
     },
+    h(
+      "p",
+      { class: "lead" },
+      "This is the way to use the web wallet: the browser keeps an installed app's storage, where it can clear a tab's, and that storage holds a deposit's note until it is spent.",
+    ),
     h("p", { class: "statement" }, "On iPhone and iPad, in Safari."),
     h(
       "p",
