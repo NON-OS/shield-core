@@ -8,6 +8,8 @@ import { openStore } from "./store.js";
 const DIR = "/shield";
 let wallet = null;
 let store = null;
+let memory = null;
+let cache = null;
 
 const unhex = (h) => Uint8Array.from(h.match(/../g) ?? [], (b) => parseInt(b, 16));
 
@@ -19,8 +21,9 @@ async function persist() {
   await store.apply(changes);
 }
 
-async function start({ threads, cache }) {
-  await init();
+async function start({ threads, cache: top }) {
+  memory = (await init()).memory;
+  cache = top;
   if (threads > 0) await core.initThreadPool(threads);
   store = await openStore();
   for (const [path, bytes] of await store.files()) core.load_file(path, bytes);
@@ -29,6 +32,21 @@ async function start({ threads, cache }) {
   if (cache) core.load_file(`${DIR}/periodic-${core.periodic_root().slice(0, 8)}.top`, cache);
   wallet = new core.WebWallet(DIR);
   return wallet.call("stored", []);
+}
+
+// One proof of the pinned test vector, whose notes are fixtures under a root no pool knows, so it
+// spends nothing. The prover checks the proof before returning it, so finishing is the result.
+async function time() {
+  const text = async (name) => (await fetch(`../../prover/vector/${name}`)).text();
+  const [request, seed, entropy] = await Promise.all(
+    ["request.json", "seed.json", "entropy.hex"].map(text),
+  );
+  const start = performance.now();
+  core.prove_with_cache(request, seed, unhex(entropy.trim()), cache);
+  return JSON.stringify({
+    seconds: (performance.now() - start) / 1000,
+    wasmBytes: memory.buffer.byteLength,
+  });
 }
 
 async function call({ method, args }) {
@@ -54,6 +72,9 @@ onmessage = async ({ data }) => {
         break;
       case "call":
         reply(await call(data));
+        break;
+      case "time":
+        reply({ ok: await time() });
         break;
       default:
         reply({
