@@ -9,8 +9,9 @@ The note store: an append-only log of sealed rows, and the state the rows fold i
 row format, the nonce discipline, the balance arithmetic, and the rule that a spent note stops
 counting.
 
-A row is one of four kinds (`row/mod.rs`): a note found, a change of status, the position the scan
-reached, and a deposit sent and not yet seen stored. A note has three statuses: unspent, pending
+A row is one of five kinds (`row/mod.rs`): a note found, a change of status, the position the scan
+reached, a deposit sent and not yet seen stored, and the deposit index a kept deposit drew its
+blinding at, so no later deposit draws it again. A note has three statuses: unspent, pending
 and spent. A kind or a status this build does not know is refused and never skipped, because
 reading a newer store as though its unknown rows were absent would make a spent note spendable
 again.

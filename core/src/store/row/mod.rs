@@ -14,6 +14,8 @@ pub(super) const CURSOR: u8 = 3;
 /// A deposit sent and not yet seen stored: the opening, which exists nowhere
 /// else until the pool stores its leaf. A new kind, so older stores still read.
 pub(super) const DEPOSIT: u8 = 4;
+/// A deposit index drawn for a deposit about to be kept, so no later deposit draws it again.
+pub(super) const DEPOSIT_INDEX: u8 = 5;
 
 /// What one row says.
 pub enum Row {
@@ -26,6 +28,9 @@ pub enum Row {
     /// A deposit this wallet built and sent, not yet seen in the pool. Its
     /// opening is the only copy of the note's secret until the leaf is stored.
     Deposit(crate::notes::NotePlaintext),
+    /// The deposit index whose blinding a kept deposit uses. Written before the deposit, so a
+    /// crash between the two wastes an index and never reuses one.
+    DepositIndex(u32),
 }
 
 pub use decode::decode;

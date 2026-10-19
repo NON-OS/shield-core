@@ -2,7 +2,7 @@
 //! and an unknown kind is an error, so a newer store is never half read.
 
 use super::status::from_byte;
-use super::{Row, CURSOR, DEPOSIT, FOUND, STATUS};
+use super::{Row, CURSOR, DEPOSIT, DEPOSIT_INDEX, FOUND, STATUS};
 use crate::error::StoreError;
 use crate::notes::{NotePlaintext, NoteRecord};
 use crate::store::reader::Reader;
@@ -39,6 +39,9 @@ pub fn decode(bytes: &[u8]) -> Result<Row, StoreError> {
             let blinding = r.quad()?;
             let spend_pk = r.quad()?;
             Row::Deposit(NotePlaintext { value, asset_id, blinding, spend_pk })
+        }
+        DEPOSIT_INDEX => {
+            Row::DepositIndex(u32::try_from(r.word()?).map_err(|_| StoreError::RowShape)?)
         }
         _ => return Err(StoreError::RowKind),
     };
