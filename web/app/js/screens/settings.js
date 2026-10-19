@@ -5,6 +5,7 @@ import { app } from "../state/app.js";
 import { watchIdle } from "../state/idle.js";
 import { watchInstall } from "../state/install.js";
 import { credits } from "./credits.js";
+import { storage } from "../device/storage.js";
 
 const proofText = {
   ready: (p) =>
@@ -28,6 +29,7 @@ export function settings() {
       ["lander", "none, you settle each spend"],
       ["private sends", (proofText[p?.state] ?? proofText.unable)(p ?? {})],
       ["threads", p?.threads ? String(p.threads) : "one, the page is not isolated"],
+      ["storage", app.storageKept ? "kept by the browser" : "may be cleared by the browser"],
     ]),
     quiet([
       ["Recovery words and keys", () => app.show("keys")],
@@ -50,3 +52,7 @@ export function settings() {
     credits(),
   );
 }
+
+settings.enter = async () => {
+  app.storageKept = await storage.kept();
+};
