@@ -18,6 +18,16 @@ export async function open(browser, base, wordsFile) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: base });
   const page = await context.newPage();
+  // Every failure the page shows, kept, since locking clears the banner before a step times out.
+  await page.addInitScript(() => {
+    window.failures = [];
+    new MutationObserver(() => {
+      for (const el of document.querySelectorAll("[role=alert]")) {
+        const text = el.textContent;
+        if (text && window.failures.at(-1) !== text) window.failures.push(text);
+      }
+    }).observe(document, { childList: true, subtree: true, characterData: true });
+  });
   const cdp = await context.newCDPSession(page);
   await cdp.send("WebAuthn.enable");
   await cdp.send("WebAuthn.addVirtualAuthenticator", {
@@ -57,7 +67,9 @@ export async function open(browser, base, wordsFile) {
         .catch(() => "")} | ${await page
         .getByRole("alert")
         .textContent()
-        .catch(() => "no failure shown")}`,
+        .catch(() => "no failure shown")} | failures so far: ${await page
+        .evaluate(() => window.failures.join(" / "))
+        .catch(() => "")}`,
   };
   await page.goto(`${base}/`);
   await w.heading("Before you start");
