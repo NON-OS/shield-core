@@ -41,6 +41,12 @@ impl Wallet {
         self.guard.as_ref()
     }
 
+    /// Forget any send waiting for a yes and every deposit candidate, as the session goes.
+    pub(super) fn drop_session_state(&self) {
+        self.drop_pending();
+        self.forget_candidates();
+    }
+
     /// Forget any send waiting for a yes, whenever the unlocked account changes.
     pub(super) fn drop_pending(&self) {
         if let Ok(mut slot) = self.pending.lock() {

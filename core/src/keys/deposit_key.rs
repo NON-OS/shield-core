@@ -11,7 +11,9 @@ use zeroize::Zeroizing;
 /// Bytes hashed for one blinding: the key, the chain id, the pool, the account, the index.
 const INPUT: usize = 32 + 8 + 20 + 4 + 4;
 
-/// One account's deposit key.
+/// One account's deposit key. A copy, as a search running outside the session lock holds, wipes on
+/// drop as the original does.
+#[derive(Clone)]
 pub(crate) struct DepositKey {
     key: Zeroizing<[u8; 32]>,
     account: u32,

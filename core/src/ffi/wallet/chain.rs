@@ -3,8 +3,9 @@
 //! the session lock, since it can take minutes, and only the scan runs under it.
 //! A note already held is never recorded again, as a second `Found` would unspend it.
 
-use super::sync_each::{sync_account, sync_watched};
+use super::sync_each::{leaves, sync_account, sync_watched};
 use super::Wallet;
+use crate::discovery::PoolLeaves;
 use crate::error::{NetError, WalletError};
 use crate::ffi::chain_types::ChainSummary;
 use crate::keys::receiving_address_text;
@@ -26,18 +27,25 @@ impl Wallet {
         self.with(|_| ())?;
         let tor = self.tor()?;
         let history = fetch_history(&tor, &RPCS)?;
+        let leaves = leaves(&history);
+        // The deposit search hashes, so it runs without the session lock.
+        let searches = self.searches(|s| {
+            (0..s.count()).filter_map(|i| s.at(i)).map(|slot| slot.account()).collect()
+        })?;
+        let recovered = self.recover(&searches, &PoolLeaves::new(&leaves), true)?;
+        drop(searches);
         // One history for every account, so the reads do not depend on how many there are.
         self.with_mut(|s| {
             s.leaves_seen = u64::try_from(history.committed.len()).unwrap_or(u64::MAX);
             let mut total = [0u32; 3];
             for index in 0..s.count() {
-                let found = sync_account(s, index, &history)?;
+                let found = sync_account(s, index, &history, &leaves, &recovered)?;
                 for (sum, n) in total.iter_mut().zip(found) {
                     *sum = sum.saturating_add(n);
                 }
             }
             for watched in s.watching.list.iter_mut() {
-                sync_watched(watched, &history)?;
+                sync_watched(watched, &history, &leaves)?;
             }
             let [received, deposited, spent] = total;
             let unspent: Vec<u64> = s.state().held_here().iter().map(|n| n.leaf_index).collect();

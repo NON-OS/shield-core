@@ -1,29 +1,34 @@
 //! Recording what one fetched history holds for each account, own or view-only. Every account
 //! reads the same history, so the network learns nothing of how many there are. An account's
-//! deposits are also searched for from its deposit key, so a restore from the words finds them.
+//! deposits, searched for from its deposit key without the session lock, are recorded here too,
+//! so a restore from the words finds them.
 
-use super::deposit_site::active_site;
+use super::deposit_search::{recovered_for, Recovered};
 use crate::discovery::{note_commitments, spent_commitments, Log};
 use crate::error::WalletError;
 use crate::notes::{NoteKey, NoteRecord, NoteStatus};
 use crate::store::Row;
-use crate::wallet::deposit_recover::recovered_deposits;
 use crate::wallet::watch::Watched;
 use crate::wallet::{scan_history, scan_history_as, History, Session};
+use std::collections::BTreeMap;
 
-/// Record what the history holds for account `index`: received, deposited, spent.
+/// Record what the history holds for account `index`: received, deposited, spent. `leaves` are the
+/// history's leaves by position and `recovered` the deposits searched for, read once for every
+/// account.
 pub(super) fn sync_account(
     s: &mut Session,
     index: u32,
     history: &History,
+    leaves: &BTreeMap<u64, [u8; 32]>,
+    recovered: &[Recovered],
 ) -> Result<[u32; 3], WalletError> {
     let Some(slot) = s.at(index) else { return Ok([0; 3]) };
     let held = slot.state().held();
     let scan = scan_history(history, slot.account(), &slot.state().pending_deposits(), &held);
-    // From index 0 each time: a hole below the last index used may be filled later, here or by
-    // another device on the same words.
-    let (indices, recovered): (Vec<u32>, Vec<NoteRecord>) =
-        recovered_deposits(history, slot.account(), &active_site()?, 0).into_iter().unzip();
+    // Searched from index 0 each time: a hole below the last index used may be filled later, here
+    // or by another device on the same words.
+    let mine = recovered_for(recovered, &slot.account().address().spend_pk);
+    let (indices, recovered): (Vec<u32>, Vec<NoteRecord>) = mine.iter().cloned().unzip();
     let mut fresh_indices: Vec<u32> =
         indices.into_iter().filter(|i| !slot.state().deposit_used(*i)).collect();
     fresh_indices.dedup();
@@ -55,12 +60,16 @@ pub(super) fn sync_account(
     for key in spent {
         s.record_to(index, Row::status(key, NoteStatus::Spent))?;
     }
-    s.mark_pool_at(index, &leaves(history));
+    s.mark_pool_at(index, leaves);
     Ok(found)
 }
 
 /// Record what the history holds for one view-only account. It has no deposits of its own.
-pub(super) fn sync_watched(w: &mut Watched, history: &History) -> Result<(), WalletError> {
+pub(super) fn sync_watched(
+    w: &mut Watched,
+    history: &History,
+    leaves: &BTreeMap<u64, [u8; 32]>,
+) -> Result<(), WalletError> {
     let held = w.state.held();
     let scan = scan_history_as(history, &w.viewer(), &[], &held);
     let known: Vec<NoteKey> = held.iter().map(|n| n.key()).collect();
@@ -75,12 +84,12 @@ pub(super) fn sync_watched(w: &mut Watched, history: &History) -> Result<(), Wal
         w.log.append(&row)?;
         w.state.apply(row);
     }
-    w.state.mark_pool(&leaves(history));
+    w.state.mark_pool(leaves);
     Ok(())
 }
 
 /// The active pool's leaves by position, which a held note must match to count.
-fn leaves(history: &History) -> std::collections::BTreeMap<u64, [u8; 32]> {
+pub(super) fn leaves(history: &History) -> BTreeMap<u64, [u8; 32]> {
     let logs: Vec<Log> =
         history.committed.iter().map(|r| Log { topics: &r.topics, data: &r.data }).collect();
     note_commitments(&logs)

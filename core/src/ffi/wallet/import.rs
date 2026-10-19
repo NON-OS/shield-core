@@ -8,7 +8,7 @@ use crate::wallet::Session;
 impl Wallet {
     /// Restore from a private key, a wallet with one account and no words.
     pub fn restore_from_key(&self, key: String) -> Result<(), WalletError> {
-        self.drop_pending();
+        self.drop_session_state();
         let session = Session::restore_key(self.paths(), self.guard(), &key)?;
         self.follow(session.active());
         *self.held()? = Some(session);

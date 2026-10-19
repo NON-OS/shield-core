@@ -1,13 +1,12 @@
 //! The two steps of the account search: looking at the public accounts of the next five, at once,
 //! and keeping the accounts found with their notes recorded from the history already fetched.
 
-use super::deposit_site::active_site;
-use super::sync_each::sync_account;
+use super::sync_each::{leaves, sync_account};
 use super::Wallet;
+use crate::discovery::PoolLeaves;
 use crate::error::WalletError;
 use crate::evm::{used, Network};
 use crate::net::tor::{as_account, Tor};
-use crate::wallet::deposit_recover::recovered_deposits;
 use crate::wallet::{scan_history, History};
 use std::sync::atomic::Ordering;
 
@@ -47,33 +46,48 @@ impl Wallet {
 
     /// Whether each candidate from `from` to `to` was paid a note or made a deposit in `history`.
     /// Only the accounts the search reaches are tried, since each costs a key agreement per note
-    /// in the pool and a hash per deposit value at each index tried.
+    /// in the pool and a hash per deposit value at each index tried. The deposit search runs
+    /// without the session lock, and its candidates are kept for `keep_found`.
     pub(super) fn paid_from(
         &self,
         history: &History,
+        pool: &PoolLeaves,
         from: usize,
         to: usize,
     ) -> Result<Vec<bool>, WalletError> {
-        let site = active_site()?;
+        let searches = self.searches(|s| {
+            s.candidates().get(from..to).unwrap_or(&[]).iter().map(|c| c.account()).collect()
+        })?;
+        let deposited: Vec<bool> =
+            self.recover(&searches, pool, false)?.iter().map(|r| !r.found.is_empty()).collect();
+        drop(searches);
         self.with(|s| {
             let reached = s.candidates().get(from..to).unwrap_or(&[]);
             reached
                 .iter()
-                .map(|c| {
-                    let paid = !scan_history(history, c.account(), &[], &[]).received.is_empty();
-                    paid || !recovered_deposits(history, c.account(), &site, 0).is_empty()
+                .zip(deposited)
+                .map(|(c, deposited)| {
+                    deposited || !scan_history(history, c.account(), &[], &[]).received.is_empty()
                 })
                 .collect()
         })
     }
 
-    /// Keep the first `found` candidates and record their notes from `history`.
+    /// Keep the first `found` candidates and record their notes from `history`. Their deposits come
+    /// from the candidates `paid_from` kept, so nothing is hashed again.
     pub(super) fn keep_found(&self, history: &History, found: usize) -> Result<u32, WalletError> {
         let paths = self.paths().clone();
+        let leaves = leaves(history);
+        let searches = self.searches(|s| {
+            let kept = s.candidates().get(..found).unwrap_or(&[]).iter().map(|c| c.account());
+            kept.chain((0..s.count()).filter_map(|i| s.at(i)).map(|slot| slot.account())).collect()
+        })?;
+        let recovered = self.recover(&searches, &PoolLeaves::new(&leaves), true)?;
+        drop(searches);
         self.with_mut(|s| {
             s.keep_candidates(&paths, found)?;
             for index in 1..s.count() {
-                sync_account(s, index, history)?;
+                sync_account(s, index, history, &leaves, &recovered)?;
             }
             Ok(s.count())
         })

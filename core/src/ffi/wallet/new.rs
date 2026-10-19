@@ -22,6 +22,7 @@ impl Wallet {
             pending: Mutex::new(None),
             quoted: Mutex::new(None),
             batch: Mutex::new(None),
+            candidates: Mutex::new(Default::default()),
             reviews: AtomicU64::new(0),
             active: AtomicU32::new(0),
             searched: AtomicU32::new(0),

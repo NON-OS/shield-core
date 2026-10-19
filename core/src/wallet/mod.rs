@@ -7,7 +7,7 @@ pub mod anchor;
 mod deposit;
 mod deposit_gate;
 mod deposit_read;
-pub(crate) mod deposit_recover;
+
 pub mod deposit_split;
 #[cfg(feature = "fuzzing")]
 pub mod fuzz_hook;

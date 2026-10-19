@@ -13,6 +13,7 @@ pub enum NoteStatus {
 }
 
 /// A spendable note: its opened plaintext, where the pool put it, and its status.
+#[derive(Clone)]
 pub struct NoteRecord {
     pub plain: NotePlaintext,
     /// The leaf position the pool authenticated, which the nullifier hashes.

@@ -30,7 +30,8 @@ impl Wallet {
         });
         let history = history.map_err(|_| WalletError::Unavailable)??;
         let mut public = public?;
-        let mut notes = self.paid_from(&history, 0, public.len())?;
+        let pool = crate::discovery::PoolLeaves::new(&super::sync_each::leaves(&history));
+        let mut notes = self.paid_from(&history, &pool, 0, public.len())?;
         let found = loop {
             let used = |k: &usize| public.get(*k) == Some(&true) || notes.get(*k) == Some(&true);
             let last = (0..public.len()).rev().find(used);
@@ -40,7 +41,7 @@ impl Wallet {
             }
             let from = public.len();
             public.extend(self.check_public(&tor, &addresses, from)?);
-            notes.extend(self.paid_from(&history, from, public.len())?);
+            notes.extend(self.paid_from(&history, &pool, from, public.len())?);
         };
         self.keep_found(&history, found)
     }

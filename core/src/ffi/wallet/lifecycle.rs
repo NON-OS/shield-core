@@ -14,7 +14,7 @@ impl Wallet {
 
     /// Create a wallet and return its phrase once, for the shell to show and drop.
     pub fn create(&self) -> Result<Vec<String>, WalletError> {
-        self.drop_pending();
+        self.drop_session_state();
         let (session, phrase) = Session::create(self.paths(), self.guard())?;
         self.follow(session.active());
         *self.held()? = Some(session);
@@ -23,7 +23,7 @@ impl Wallet {
 
     /// Restore from a phrase the user typed back in.
     pub fn restore(&self, words: Vec<String>) -> Result<(), WalletError> {
-        self.drop_pending();
+        self.drop_session_state();
         let session = Session::restore(self.paths(), self.guard(), &words)?;
         self.follow(session.active());
         *self.held()? = Some(session);
@@ -32,7 +32,7 @@ impl Wallet {
 
     /// Unlock the stored wallet, where the keystore authenticates the user.
     pub fn unlock(&self) -> Result<(), WalletError> {
-        self.drop_pending();
+        self.drop_session_state();
         let session = Session::unlock(self.paths(), self.guard())?;
         self.follow(session.active());
         *self.held()? = Some(session);
@@ -41,7 +41,7 @@ impl Wallet {
 
     /// Drop the session, and with it every key derived from the seed.
     pub fn lock(&self) -> Result<(), WalletError> {
-        self.drop_pending();
+        self.drop_session_state();
         *self.held()? = None;
         Ok(())
     }

@@ -10,6 +10,7 @@ mod accounts;
 mod chain;
 mod deposit;
 mod deposit_held;
+mod deposit_search;
 mod deposit_site;
 mod export;
 mod fee;
@@ -62,6 +63,8 @@ pub struct Wallet {
     pending: Mutex<Option<Pending>>,
     quoted: Mutex<Option<quote::Quoted>>,
     batch: Mutex<Option<PendingBatch>>,
+    /// Each account's deposit candidates, kept between syncs while the wallet is unlocked.
+    candidates: Mutex<deposit_search::Candidates>,
     reviews: AtomicU64,
     /// The active account, for the Tor client to route by without taking the session lock.
     active: AtomicU32,

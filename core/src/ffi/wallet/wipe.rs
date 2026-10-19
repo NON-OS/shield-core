@@ -11,7 +11,7 @@ impl Wallet {
     /// Drop the session and destroy the seed and notes here. True when there was a
     /// wallet, and absent is success. The recovery phrase is the only way back.
     pub fn wipe(&self) -> Result<bool, WalletError> {
-        self.drop_pending();
+        self.drop_session_state();
         *self.held()? = None;
         let vault = Vault::at(self.paths().vault.clone());
         let existed = vault.exists();

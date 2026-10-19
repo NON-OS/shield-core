@@ -4,12 +4,15 @@
 //! A deposit made by one wallet found again by a second restored from the same words, with
 //! nothing but the pool's public logs between them.
 
+use super::super::deposit_search::Recovered;
 use super::super::deposit_site::active_site;
-use super::sync_account;
+use super::{leaves, sync_account};
 use crate::custody::HardwareGuard;
 use crate::discovery::DEPOSIT_GAP;
+use crate::discovery::{find_deposits, DepositSearch, PoolLeaves};
 use crate::error::CustodyError;
 use crate::keys::note_nullifier_wire;
+use crate::net::pool::ACTIVE;
 use crate::net::rpc::RawLog;
 use crate::notes::NoteStatus;
 use crate::store::Row;
@@ -67,6 +70,15 @@ fn history(commitments: &[[u8; 32]], nullifiers: &[[u8; 32]]) -> History {
     }
 }
 
+/// Account 0 synced against `h` as `sync_chain` does: its deposits searched, then recorded.
+fn sync(s: &mut Session, h: &History) -> Result<[u32; 3], crate::error::WalletError> {
+    let leaves = leaves(h);
+    let search = DepositSearch::of(s.account(), &active_site()?, ACTIVE.assets);
+    let found = find_deposits(&search, &mut Default::default(), &PoolLeaves::new(&leaves));
+    let recovered = [Recovered { spend_pk: search.spend_pk(), found }];
+    sync_account(s, 0, h, &leaves, &recovered)
+}
+
 /// Wallet 1 draws and keeps a deposit the way a review and its yes do, and returns its leaf.
 fn deposit(s: &mut Session, amount: u128) -> [u8; 32] {
     let site = active_site().expect("the pool");
@@ -83,18 +95,18 @@ fn a_deposit_comes_back_from_the_words_alone_and_spends() {
     let first = deposit(&mut one, CENT);
     let second = deposit(&mut one, 20 * CENT);
     let pool = history(&[[1; 32], first, [2; 32], second], &[]);
-    sync_account(&mut one, 0, &pool).expect("synced");
+    sync(&mut one, &pool).expect("synced");
     let kept: Vec<_> = one.state().spendable().iter().map(|n| (n.cm, n.leaf_index)).collect();
     assert_eq!(kept.len(), 2, "wallet 1 holds both from its store");
 
     let (two_dir, mut two) = restored("two");
     assert!(two.state().spendable().is_empty());
-    let [_, deposited, _] = sync_account(&mut two, 0, &pool).expect("synced");
+    let [_, deposited, _] = sync(&mut two, &pool).expect("synced");
     assert_eq!(deposited, 2);
     let found: Vec<_> = two.state().spendable().iter().map(|n| (n.cm, n.leaf_index)).collect();
     assert_eq!(found, kept, "the same notes at the same leaves, so spendable as wallet 1's");
     assert_eq!(two.state().next_deposit(), 2, "the next deposit passes the ones found");
-    let again = sync_account(&mut two, 0, &pool).expect("synced");
+    let again = sync(&mut two, &pool).expect("synced");
     assert_eq!(again, [0, 0, 0], "a second sync records nothing twice");
     std::fs::remove_dir_all(&one_dir).ok();
     std::fs::remove_dir_all(&two_dir).ok();
@@ -112,13 +124,13 @@ fn one_commitment_at_two_leaves_is_two_deposits_everywhere() {
     let pool = history(&[leaf, [4; 32], leaf], &[]);
     let (c_dir, mut c) = restored("twin-c");
     for s in [&mut a, &mut b, &mut c] {
-        sync_account(s, 0, &pool).expect("synced");
+        sync(s, &pool).expect("synced");
         let leaves: Vec<u64> = s.state().spendable().iter().map(|n| n.leaf_index).collect();
         assert_eq!(leaves, vec![0, 2], "both leaves are held");
     }
     let cm = a.state().spendable()[0].cm;
     let spent = history(&[leaf, [4; 32], leaf], &[note_nullifier_wire(a.account(), &cm, 2)]);
-    sync_account(&mut c, 0, &spent).expect("synced");
+    sync(&mut c, &spent).expect("synced");
     let left: Vec<u64> = c.state().spendable().iter().map(|n| n.leaf_index).collect();
     assert_eq!(left, vec![0], "only the note at leaf 2 is spent");
     for dir in [a_dir, b_dir, c_dir] {
@@ -133,7 +145,7 @@ fn one_commitment_at_two_leaves_is_two_deposits_everywhere() {
 fn a_deposit_after_many_unpaid_tickets_comes_back() {
     let (one_dir, mut one) = restored("unpaid-one");
     let landed = deposit(&mut one, 2 * CENT);
-    sync_account(&mut one, 0, &history(&[landed], &[])).expect("synced");
+    sync(&mut one, &history(&[landed], &[])).expect("synced");
     for _ in 0..DEPOSIT_GAP + 8 {
         deposit(&mut one, CENT);
     }
@@ -143,7 +155,7 @@ fn a_deposit_after_many_unpaid_tickets_comes_back() {
     let pool = history(&[landed, [6; 32], last], &[]);
 
     let (two_dir, mut two) = restored("unpaid-two");
-    let [_, deposited, _] = sync_account(&mut two, 0, &pool).expect("synced");
+    let [_, deposited, _] = sync(&mut two, &pool).expect("synced");
     assert_eq!(deposited, 2, "the deposit after the unpaid tickets is found");
     let leaves: Vec<u64> = two.state().spendable().iter().map(|n| n.leaf_index).collect();
     assert_eq!(leaves, vec![0, 2]);
@@ -157,13 +169,13 @@ fn a_spent_deposit_shows_spent_after_a_restore() {
     let leaf = deposit(&mut one, CENT);
     let unspent = deposit(&mut one, 2 * CENT);
     let pool = history(&[leaf, unspent], &[]);
-    sync_account(&mut one, 0, &pool).expect("synced");
+    sync(&mut one, &pool).expect("synced");
     let note = one.state().spendable()[0].cm;
     let nullifier = note_nullifier_wire(one.account(), &note, 0);
     let spent = history(&[leaf, unspent], &[nullifier]);
 
     let (two_dir, mut two) = restored("spent-two");
-    let [_, deposited, marked] = sync_account(&mut two, 0, &spent).expect("synced");
+    let [_, deposited, marked] = sync(&mut two, &spent).expect("synced");
     assert_eq!((deposited, marked), (2, 1));
     let held = two.state().held();
     let status = |cm| held.iter().find(|n| n.cm == cm).map(|n| n.status);
@@ -179,7 +191,7 @@ fn a_random_blinding_deposit_still_spends_from_its_store() {
     let request = prepare_deposit(&s.address(), CENT, 0, 50, 1).expect("a deposit");
     s.record(Row::Deposit(request.note.clone())).expect("kept as before");
     let pool = history(&[[3; 32], request.commitment], &[]);
-    let [_, deposited, _] = sync_account(&mut s, 0, &pool).expect("synced");
+    let [_, deposited, _] = sync(&mut s, &pool).expect("synced");
     assert_eq!(deposited, 1);
     let spendable = s.state().spendable();
     assert_eq!(spendable.len(), 1);
