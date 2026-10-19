@@ -1,6 +1,7 @@
 import { h } from "./h.js";
 import { back as chevron } from "./back.js";
 import { app } from "../state/app.js";
+import { route } from "../state/route.js";
 
 // Set through the style object, which the page's CSP allows, where a style attribute it would not.
 function band(name) {
@@ -32,7 +33,7 @@ export function frame({ number, title, back, backdrop, footer }, ...content) {
       h("button", { type: "button", class: "take", onclick: () => app.updateReady() }, "Reload"),
     );
   const status = [
-    app.offline ? "offline" : "browser, direct",
+    app.offline ? "offline" : route.nym ? "nym mixnet" : "browser, direct",
     app.network === "mainnet" ? "mainnet, real money" : "sepolia, test",
     app.version,
   ].filter(Boolean);
