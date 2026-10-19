@@ -20,9 +20,9 @@ const say = (fact) => console.log(`${new Date().toISOString()} ${step}: ${fact}`
 async function publicAddress(w) {
   await w.click("Receive");
   await w.heading("Receive");
-  const nox1 = await w.page.locator(".address").textContent();
+  const nox1 = await w.page.locator(".value-block .visually-hidden").textContent();
   await w.click("Receive at the 0x address");
-  const zero = await w.page.locator(".address").filter({ hasText: /^0x/ });
+  const zero = await w.page.locator(".value-block .visually-hidden").filter({ hasText: /^0x/ });
   await zero.waitFor();
   const address = await zero.textContent();
   await w.click("Back");
@@ -34,11 +34,16 @@ async function readPool(w) {
   await w.click("Shield");
   await w.heading("Shield");
   await w.click("Read the pool");
-  await w.text("pool read at block");
-  const eth = await w.page.locator(".balance .amount").nth(1).textContent();
-  say(
-    `pool read at block ${await w.page.locator("dd").first().textContent()}, ETH shielded ${eth}`,
-  );
+  // The row reads "Reading the pool" while the read runs, and its name again once it is done.
+  await w.page
+    .getByRole("button", { name: "Read the pool", exact: true })
+    .waitFor({ timeout: 30 * 60 * 1000 });
+  if (await w.page.getByRole("button", { name: "Details", exact: true }).count())
+    await w.click("Details");
+  await w.text("Pool read at block");
+  const eth = await w.page.locator(".coin-row .amount").nth(1).textContent();
+  const block = await w.page.locator(".tile-row .value").first().textContent();
+  say(`pool read at block ${block}, ETH shielded ${eth}`);
   return eth;
 }
 
@@ -83,13 +88,13 @@ async function spend(w, { withdraw, to, amount }) {
   say(
     `proved in ${Math.round((Date.now() - started) / 1000)} s, including the request for the pool`,
   );
-  await w.click("Review the settlement");
+  await w.click("Settle it yourself");
   await w.page
     .getByRole("button", { name: "Confirm and settle" })
     .waitFor({ timeout: 10 * 60 * 1000 });
   await w.click("Confirm and settle");
   await w.text("Settling on the pool.");
-  const hash = await w.page.locator("dd").last().textContent();
+  const hash = await w.page.locator(".value-block .visually-hidden").last().textContent();
   say(`settlement ${hash}`);
   await mined(w, "Settled on the pool.");
   say("settled on the pool");
@@ -107,11 +112,11 @@ if (step === "gas") {
   await a.heading("Send");
   await a.page.locator("#coin").selectOption("eth");
   await a.fill("To 0x address", B.address);
-  await a.fill("Amount in ETH", "0.03");
+  await a.fill("Amount in ETH", "0.01");
   await a.click("Review");
   await a.click("Confirm and send");
   await a.text("Transaction");
-  say(`public send to B ${await a.page.locator(".address").textContent()}`);
+  say(`public send to B ${await a.page.locator(".value-block .visually-hidden").textContent()}`);
   await mined(a, "Sent and mined.");
   say("mined");
 }
@@ -124,10 +129,10 @@ if (step === "deposit") {
   await a.page.locator("input").first().fill("0.05");
   await a.click("Review");
   await a.text("the note holds");
-  say(`note holds ${await a.page.locator("dd").nth(2).textContent()}`);
+  say(`note holds ${await a.page.locator("dd").nth(3).textContent()}`);
   await a.click("Confirm and shield");
   await a.text("Deposit sent. Waiting for a block.");
-  say(`deposit ${await a.page.locator(".address").textContent()}`);
+  say(`deposit ${await a.page.locator(".value-block .visually-hidden").textContent()}`);
   await mined(a, "Shielded.");
   say("shielded");
 }
