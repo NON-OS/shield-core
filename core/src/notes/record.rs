@@ -24,6 +24,18 @@ pub struct NoteRecord {
     pub found_at: u64,
 }
 
+/// A held note's place in the store: its commitment and its leaf. Two deposits of one amount at one
+/// deposit index share a commitment, and each is still a note of its own at its own leaf, with its
+/// own nullifier, so neither may stand in for the other.
+pub type NoteKey = ([u64; 4], u64);
+
+impl NoteRecord {
+    /// Where the store keeps this note.
+    pub fn key(&self) -> NoteKey {
+        (self.cm, self.leaf_index)
+    }
+}
+
 impl core::fmt::Debug for NoteRecord {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("NoteRecord")

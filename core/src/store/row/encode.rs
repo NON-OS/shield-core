@@ -2,7 +2,7 @@
 //! The kind fixes the shape, so a layout change needs a new kind, never an edit to an old one.
 
 use super::status::to_byte;
-use super::{Row, CURSOR, DEPOSIT, DEPOSIT_INDEX, FOUND, STATUS};
+use super::{Row, CURSOR, DEPOSIT, DEPOSIT_INDEX, FOUND, STATUS, STATUS_AT};
 
 fn words(out: &mut Vec<u8>, w: &[u64]) {
     for v in w {
@@ -25,9 +25,15 @@ impl Row {
                 words(&mut out, &[r.found_at]);
                 out.push(to_byte(r.status));
             }
-            Row::Status { cm, status } => {
+            Row::Status { cm, leaf: None, status } => {
                 out.push(STATUS);
                 words(&mut out, cm);
+                out.push(to_byte(*status));
+            }
+            Row::Status { cm, leaf: Some(leaf), status } => {
+                out.push(STATUS_AT);
+                words(&mut out, cm);
+                words(&mut out, &[*leaf]);
                 out.push(to_byte(*status));
             }
             Row::Cursor(at) => {

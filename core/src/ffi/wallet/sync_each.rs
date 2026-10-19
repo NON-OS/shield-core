@@ -5,7 +5,7 @@
 use super::deposit_site::active_site;
 use crate::discovery::{note_commitments, spent_commitments, Log};
 use crate::error::WalletError;
-use crate::notes::{NoteRecord, NoteStatus};
+use crate::notes::{NoteKey, NoteRecord, NoteStatus};
 use crate::store::Row;
 use crate::wallet::deposit_recover::recovered_deposits;
 use crate::wallet::watch::Watched;
@@ -23,10 +23,10 @@ pub(super) fn sync_account(
     let next = slot.state().next_deposit();
     let (indices, recovered): (Vec<u32>, Vec<NoteRecord>) =
         recovered_deposits(history, slot.account(), &active_site()?, next).into_iter().unzip();
-    let mut known: Vec<[u64; 4]> = held.iter().map(|n| n.cm).collect();
+    let mut known: Vec<NoteKey> = held.iter().map(|n| n.key()).collect();
     let mut fresh = |n: &NoteRecord| {
-        let new = !known.contains(&n.cm);
-        known.push(n.cm);
+        let new = !known.contains(&n.key());
+        known.push(n.key());
         new
     };
     let received: Vec<_> = scan.received.into_iter().filter(&mut fresh).collect();
@@ -47,8 +47,8 @@ pub(super) fn sync_account(
     for note in received.into_iter().chain(deposited) {
         s.record_to(index, Row::Found(note))?;
     }
-    for cm in spent {
-        s.record_to(index, Row::Status { cm, status: NoteStatus::Spent })?;
+    for key in spent {
+        s.record_to(index, Row::status(key, NoteStatus::Spent))?;
     }
     s.mark_pool_at(index, &leaves(history));
     Ok(found)
@@ -58,13 +58,13 @@ pub(super) fn sync_account(
 pub(super) fn sync_watched(w: &mut Watched, history: &History) -> Result<(), WalletError> {
     let held = w.state.held();
     let scan = scan_history_as(history, &w.viewer(), &[], &held);
-    let known: Vec<[u64; 4]> = held.iter().map(|n| n.cm).collect();
+    let known: Vec<NoteKey> = held.iter().map(|n| n.key()).collect();
     let rows: Vec<Row> = scan
         .received
         .into_iter()
-        .filter(|n| !known.contains(&n.cm))
+        .filter(|n| !known.contains(&n.key()))
         .map(Row::Found)
-        .chain(scan.spent.into_iter().map(|cm| Row::Status { cm, status: NoteStatus::Spent }))
+        .chain(scan.spent.into_iter().map(|key| Row::status(key, NoteStatus::Spent)))
         .collect();
     for row in rows {
         w.log.append(&row)?;

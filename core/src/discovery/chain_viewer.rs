@@ -2,14 +2,13 @@
 //! commits to its leaf under `spend_pk`, match deposits sent, and with `nk` find the spent notes.
 
 use super::chain::ChainScan;
-use super::chain_read::{abi_bytes, leaf_of, record};
+use super::chain_read::{abi_bytes, by_commitment, leaf_of, record};
 use super::logs::{note_commitments, Log};
 use crate::keys::{nullifier_wire_with, Viewer};
 use crate::notes::{
     commitment, open_xwing, wire_digest, NotePlaintext, NoteRecord, NoteStatus, XwingOpened,
 };
 use crate::prover::pool_hasher;
-use std::collections::BTreeMap;
 
 /// The same scan with only what a view key holds. Without `nk` no note is found spent.
 pub fn scan_viewer(
@@ -39,11 +38,11 @@ pub fn scan_viewer(
             scan.received.push(record(plain, leaf_index, leaf));
         }
     }
-    let by_leaf: BTreeMap<[u8; 32], u64> = leaves.iter().map(|(i, c)| (*c, *i)).collect();
+    let by_leaf = by_commitment(&leaves);
     for plain in pending {
         let cm = commitment(&pool_hasher(), &plain.note());
         let wire = wire_digest(&[cm[0].value(), cm[1].value(), cm[2].value(), cm[3].value()]);
-        if let Some(index) = by_leaf.get(&wire) {
+        for index in by_leaf.get(&wire).into_iter().flatten() {
             scan.deposited.push(record(plain.clone(), *index, &wire));
         }
     }
@@ -54,7 +53,7 @@ pub fn scan_viewer(
         .iter()
         .filter(|n| n.status != NoteStatus::Spent)
         .filter(|n| published.contains(&nullifier_wire_with(nk, &n.cm, n.leaf_index)))
-        .map(|n| n.cm)
+        .map(|n| n.key())
         .collect();
     scan
 }

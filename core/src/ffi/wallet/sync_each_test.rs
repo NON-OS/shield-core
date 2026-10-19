@@ -98,6 +98,32 @@ fn a_deposit_comes_back_from_the_words_alone_and_spends() {
     std::fs::remove_dir_all(&two_dir).ok();
 }
 
+/// Two devices on the same words each deposit 0.01 ETH at index 0, so the pool holds one commitment
+/// at two leaves. Each device, and a third restored from the words, holds both notes, and spending
+/// one leaves the other.
+#[test]
+fn one_commitment_at_two_leaves_is_two_deposits_everywhere() {
+    let (a_dir, mut a) = restored("twin-a");
+    let (b_dir, mut b) = restored("twin-b");
+    let leaf = deposit(&mut a, CENT);
+    assert_eq!(deposit(&mut b, CENT), leaf, "the same index and amount, so the same commitment");
+    let pool = history(&[leaf, [4; 32], leaf], &[]);
+    let (c_dir, mut c) = restored("twin-c");
+    for s in [&mut a, &mut b, &mut c] {
+        sync_account(s, 0, &pool).expect("synced");
+        let leaves: Vec<u64> = s.state().spendable().iter().map(|n| n.leaf_index).collect();
+        assert_eq!(leaves, vec![0, 2], "both leaves are held");
+    }
+    let cm = a.state().spendable()[0].cm;
+    let spent = history(&[leaf, [4; 32], leaf], &[note_nullifier_wire(a.account(), &cm, 2)]);
+    sync_account(&mut c, 0, &spent).expect("synced");
+    let left: Vec<u64> = c.state().spendable().iter().map(|n| n.leaf_index).collect();
+    assert_eq!(left, vec![0], "only the note at leaf 2 is spent");
+    for dir in [a_dir, b_dir, c_dir] {
+        std::fs::remove_dir_all(dir).ok();
+    }
+}
+
 #[test]
 fn a_spent_deposit_shows_spent_after_a_restore() {
     let (one_dir, mut one) = restored("spent-one");

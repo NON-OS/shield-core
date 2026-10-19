@@ -24,7 +24,7 @@ pub use plaintext::NotePlaintext;
 /// The largest value a note may hold, `p - 2`, the pool's `MAX_VALUE`. The
 /// circuit adds values in the field, so a larger one could wrap.
 pub const MAX_VALUE: u64 = nonos_stark::field::P - 2;
-pub use record::{NoteRecord, NoteStatus};
+pub use record::{NoteKey, NoteRecord, NoteStatus};
 pub use wire::{NoteCipher, CIPHER_LEN};
 pub use wire_digest::wire_digest;
 pub use xwing::{open as open_xwing, seal as seal_xwing, Opened as XwingOpened, Opening, BLOB_LEN};

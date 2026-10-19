@@ -1,18 +1,19 @@
-//! What the rows fold up to, keyed by commitment. The balance comes only from notes held here.
+//! What the rows fold up to, keyed by commitment and leaf. The balance comes only from notes held
+//! here.
 
 use super::row::Row;
-use crate::notes::NoteRecord;
+use crate::notes::{NoteKey, NoteRecord};
 use std::collections::BTreeMap;
 
 /// What the wallet holds, as the rows fold up to.
 #[derive(Default)]
 pub struct StoreState {
-    pub(super) notes: BTreeMap<[u64; 4], NoteRecord>,
+    pub(super) notes: BTreeMap<NoteKey, NoteRecord>,
     cursor: u64,
     /// Deposits sent and not yet seen stored, by the commitment they will have.
     pending: BTreeMap<[u64; 4], crate::notes::NotePlaintext>,
     /// Notes held from another pool, marked at each sync and never written.
-    pub(super) elsewhere: std::collections::BTreeSet<[u64; 4]>,
+    pub(super) elsewhere: std::collections::BTreeSet<NoteKey>,
     /// The first deposit index no kept deposit has drawn.
     next_deposit: u32,
 }
@@ -36,10 +37,16 @@ impl StoreState {
         match row {
             Row::Found(record) => {
                 self.pending.remove(&record.cm);
-                self.notes.insert(record.cm, record);
+                self.notes.insert(record.key(), record);
             }
-            Row::Status { cm, status } => {
-                if let Some(record) = self.notes.get_mut(&cm) {
+            Row::Status { cm, leaf: Some(leaf), status } => {
+                if let Some(record) = self.notes.get_mut(&(cm, leaf)) {
+                    record.status = status;
+                }
+            }
+            // An older store's row, written when one commitment was one note.
+            Row::Status { cm, leaf: None, status } => {
+                for (_, record) in self.notes.range_mut((cm, 0)..=(cm, u64::MAX)) {
                     record.status = status;
                 }
             }
@@ -47,7 +54,7 @@ impl StoreState {
             Row::Deposit(plain) => {
                 let cm = crate::notes::commitment(&crate::prover::pool_hasher(), &plain.note());
                 let key = [cm[0].value(), cm[1].value(), cm[2].value(), cm[3].value()];
-                if !self.notes.contains_key(&key) {
+                if self.notes.range((key, 0)..=(key, u64::MAX)).next().is_none() {
                     self.pending.insert(key, plain);
                 }
             }

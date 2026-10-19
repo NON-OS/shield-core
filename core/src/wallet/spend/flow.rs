@@ -57,9 +57,9 @@ pub fn spend(
     };
     let sealed = seal_outputs(&proof, &payee_ek, &own_ek)?;
     let handoff = write_handoff(&dir.join("export").join("handoff"), &proof, &sealed)?;
-    for note in picked.notes.iter().filter(|n| n.value > 0) {
+    for (note, leaf) in picked.notes.iter().zip(picked.leaves).filter(|(n, _)| n.value > 0) {
         let cm = commitment(&pool_hasher(), &note.note()).map(|f| f.value());
-        session.record(Row::Status { cm, status: NoteStatus::Pending })?;
+        session.record(Row::status((cm, leaf), NoteStatus::Pending))?;
     }
     Ok(SpendOutcome { handoff, weakened: proof.weakened })
 }

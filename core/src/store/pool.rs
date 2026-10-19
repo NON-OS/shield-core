@@ -15,12 +15,12 @@ impl StoreState {
     /// Mark each held note the active pool does not hold at its position.
     pub(crate) fn mark_pool(&mut self, committed: &BTreeMap<u64, [u8; 32]>) {
         self.elsewhere =
-            self.notes.values().filter(|n| !on_pool(committed, n)).map(|n| n.cm).collect();
+            self.notes.values().filter(|n| !on_pool(committed, n)).map(NoteRecord::key).collect();
     }
 
     /// Whether a held note counts here, as of the last mark.
     pub fn counts(&self, note: &NoteRecord) -> bool {
-        !self.elsewhere.contains(&note.cm)
+        !self.elsewhere.contains(&note.key())
     }
 
     /// The held notes on the active pool, spent or not, as of the last mark.

@@ -48,13 +48,49 @@ fn rows_survive_a_reopen_and_the_balance_follows_them() {
     for row in [Row::Found(record(1000, 0)), Row::Found(record(2000, 4)), Row::Cursor(8)] {
         log.append(&row).expect("append");
     }
-    let spent = Row::Status { cm: [0, 1, 2, 3], status: NoteStatus::Spent };
+    // A status row as a store before leaves were named wrote it, by commitment alone.
+    let spent = Row::Status { cm: [0, 1, 2, 3], leaf: None, status: NoteStatus::Spent };
     log.append(&spent).expect("append");
 
     let (_reopened, replayed) = NoteLog::open(path, &seed).expect("reopen");
     assert_eq!(replayed.balance(&ETH).spendable, 2000, "a spent note is not spendable");
     assert_eq!(replayed.balance(&ETH).note_count, 1);
     assert_eq!(replayed.cursor(), 8);
+}
+
+/// Two notes under one commitment at two leaves, as two deposits of one amount at one deposit index
+/// make. Each is held, each spends alone, and both survive a reopen.
+#[test]
+fn one_commitment_at_two_leaves_is_two_notes() {
+    let dir = scratch("store-twin");
+    let seed = phrase_to_seed(&generate_phrase().expect("entropy")).expect("seed");
+    let path = dir.join("notes.log");
+    let first = record(1000, 0);
+    let twin =
+        NoteRecord { leaf_index: 6, found_at: 6, plain: first.plain.clone(), ..record(0, 0) };
+    let (mut log, _) = NoteLog::open(path.clone(), &seed).expect("open");
+    log.append(&Row::Found(first)).expect("append");
+    log.append(&Row::Found(twin)).expect("append");
+    let (_, both) = NoteLog::open(path.clone(), &seed).expect("reopen");
+    assert_eq!((both.balance(&ETH).spendable, both.balance(&ETH).note_count), (2000, 2));
+
+    log.append(&Row::status(([0, 1, 2, 3], 6), NoteStatus::Spent)).expect("append");
+    let (_, one) = NoteLog::open(path.clone(), &seed).expect("reopen");
+    assert_eq!(one.balance(&ETH).spendable, 1000, "only the note at leaf 6 is spent");
+    let left: Vec<u64> = one
+        .held()
+        .iter()
+        .filter(|n| n.status == NoteStatus::Unspent)
+        .map(|n| n.leaf_index)
+        .collect();
+    assert_eq!(left, vec![0]);
+
+    // A row of the older kind names no leaf, and stands for every note under its commitment.
+    let old = Row::Status { cm: [0, 1, 2, 3], leaf: None, status: NoteStatus::Pending };
+    assert_eq!(old.encode()[0], 2, "the older kind is still written as it was");
+    log.append(&old).expect("append");
+    let (_, none) = NoteLog::open(path, &seed).expect("reopen");
+    assert!(none.held().iter().all(|n| n.status == NoteStatus::Pending));
 }
 
 #[test]

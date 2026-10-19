@@ -14,8 +14,8 @@ pub struct ChainScan {
     pub received: Vec<NoteRecord>,
     /// This wallet's own deposits the pool has now stored.
     pub deposited: Vec<NoteRecord>,
-    /// Commitments of this wallet's notes whose nullifier the pool published.
-    pub spent: Vec<[u64; 4]>,
+    /// This wallet's notes whose nullifier the pool published, by commitment and leaf.
+    pub spent: Vec<crate::notes::NoteKey>,
 }
 
 /// Read this wallet's notes from the logs. `pending` are sent deposits not yet seen stored,

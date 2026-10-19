@@ -3,7 +3,7 @@
 //! can hold is tried, and a commitment the pool stored is a deposit of this account. Nothing is
 //! asked of any server: the leaves come from the scan every wallet already reads.
 
-use super::chain_read::record;
+use super::chain_read::{by_commitment, record};
 use super::deposit_values::deposit_values;
 use crate::keys::{Account, DepositSite};
 use crate::net::asset::Asset;
@@ -26,7 +26,7 @@ pub fn recover_deposits(
     leaves: &BTreeMap<u64, [u8; 32]>,
     from: u32,
 ) -> Vec<(u32, NoteRecord)> {
-    let by_leaf: BTreeMap<[u8; 32], u64> = leaves.iter().map(|(i, c)| (*c, *i)).collect();
+    let by_leaf = by_commitment(leaves);
     let values = deposit_values(assets);
     let h = pool_hasher();
     let spend_pk = account.address().spend_pk;
@@ -42,7 +42,7 @@ pub fn recover_deposits(
         for (asset_id, value) in &values {
             let [_, _, public] = quads(&at(*value, *asset_id).limbs());
             let wire = wire_digest(&h.compress(&public, &owner).map(|e| e.value()));
-            if let Some(leaf_index) = by_leaf.get(&wire) {
+            for leaf_index in by_leaf.get(&wire).into_iter().flatten() {
                 let plain =
                     NotePlaintext { value: *value, asset_id: *asset_id, blinding, spend_pk };
                 found.push((index, record(plain, *leaf_index, &wire)));

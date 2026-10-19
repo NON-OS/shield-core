@@ -23,16 +23,19 @@ impl Wallet {
                 let held = s.state().held();
                 let scan =
                     scan_history(&history, s.account(), &s.state().pending_deposits(), &held);
-                let pending: Vec<[u64; 4]> =
-                    held.iter().filter(|n| n.status == NoteStatus::Pending).map(|n| n.cm).collect();
+                let pending: Vec<_> = held
+                    .iter()
+                    .filter(|n| n.status == NoteStatus::Pending)
+                    .map(|n| n.key())
+                    .collect();
                 (pending, scan.spent)
             };
-            for cm in &spent {
-                s.record(Row::Status { cm: *cm, status: NoteStatus::Spent })?;
+            for key in &spent {
+                s.record(Row::status(*key, NoteStatus::Spent))?;
             }
             let back = releasable(&pending, &spent);
-            for cm in &back {
-                s.record(Row::Status { cm: *cm, status: NoteStatus::Unspent })?;
+            for key in &back {
+                s.record(Row::status(*key, NoteStatus::Unspent))?;
             }
             Ok(u32::try_from(back.len()).unwrap_or(u32::MAX))
         })

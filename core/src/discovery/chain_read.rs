@@ -15,6 +15,18 @@ pub(super) fn record(plain: NotePlaintext, leaf_index: u64, leaf: &[u8; 32]) -> 
     NoteRecord { plain, leaf_index, cm, status: NoteStatus::Unspent, found_at: leaf_index }
 }
 
+/// Every leaf holding each commitment. A commitment can sit at more than one leaf, as two deposits
+/// of one amount at one deposit index do, and each of those leaves is a note of its own.
+pub(super) fn by_commitment(
+    leaves: &std::collections::BTreeMap<u64, [u8; 32]>,
+) -> std::collections::BTreeMap<[u8; 32], Vec<u64>> {
+    let mut out: std::collections::BTreeMap<[u8; 32], Vec<u64>> = Default::default();
+    for (index, cm) in leaves {
+        out.entry(*cm).or_default().push(*index);
+    }
+    out
+}
+
 pub(super) fn leaf_of(topic: &[u8; 32]) -> u64 {
     let mut b = [0u8; 8];
     b.copy_from_slice(topic.get(24..32).unwrap_or(&[0; 8]));

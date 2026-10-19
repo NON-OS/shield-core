@@ -128,7 +128,7 @@ fn received_deposited_and_spent_are_all_found() {
     assert_eq!((scan.received[0].plain.value, scan.received[0].leaf_index), (500, 1));
     assert_eq!(scan.deposited.len(), 1, "the stored deposit, and not the waiting one");
     assert_eq!((scan.deposited[0].plain.value, scan.deposited[0].leaf_index), (3_000, 0));
-    assert_eq!(scan.spent, vec![words], "the held note's nullifier was published");
+    assert_eq!(scan.spent, vec![(words, 9)], "the held note's nullifier was published");
 }
 
 #[test]

@@ -62,9 +62,5 @@ fn the_matcher_marks_only_the_spent_note() {
     let other = record(&acct, [50, 60, 70, 80], 4);
     let spent = [note_nullifier_wire(&acct, &mine.cm, mine.leaf_index)];
     let hit = spent_commitments(&acct, &[mine, other], &spent);
-    assert_eq!(hit, alloc_vec([10, 20, 30, 40]), "only the note whose nullifier was published");
-}
-
-fn alloc_vec(cm: [u64; 4]) -> Vec<[u64; 4]> {
-    vec![cm]
+    assert_eq!(hit, vec![([10, 20, 30, 40], 3)], "only the note whose nullifier was published");
 }
