@@ -27,7 +27,10 @@ const screens = [
 
 const images = new URL("../app/images/", import.meta.url);
 const mark = readFileSync(new URL("mark.svg", images), "utf8");
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium", headless: true });
+const browser = await chromium.launch({
+  executablePath: "/opt/pw-browsers/chromium",
+  headless: true,
+});
 const page = await browser.newPage();
 const links = [];
 for (const [w, h, r] of screens) {
