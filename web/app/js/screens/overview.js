@@ -99,6 +99,7 @@ export function overview() {
       roundAction("Receive", "down", async () =>
         app.show((await app.call("networkHasShield", app.network)) ? "receive" : "accountReceive"),
       ),
+      roundAction("Swap", "swap", () => app.show("swap")),
       roundAction("Shield", "shield", () => app.show("shield")),
     ),
     quiet([["Read again", read]]),
