@@ -37,7 +37,7 @@ export function warning() {
       "The key is sealed under a passkey, where the apps use the Secure Enclave or the Keystore. No key, note or seed is sent to any server.",
     ),
     lead(
-      "A deposit's note is kept only in this browser's storage until it is spent, as on the phones, and the recovery words do not bring an unspent deposit back. A browser can clear a site's storage: Safari does after seven days without a visit, unless the page is on the home screen. Add it to the home screen, and spend a deposit on the device that made it.",
+      "A deposit's note is kept only in this browser's storage until it is spent, as on the phones, and the recovery words do not bring an unspent deposit back. A browser can clear a site's storage: Safari does after seven days without a visit, unless the page is on the home screen. Add it to the home screen, and after a deposit use Make it recoverable, a private send to this wallet's own address, whose notes the words do restore.",
     ),
     lead(
       "A proof needs about 1 GiB of memory. A phone browser may not give a page that much, so on a phone private sends wait until one test proof has finished here. If it cannot finish, use the NØNOS app or a computer. Nothing is ever proved on a server.",
