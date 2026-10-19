@@ -1,11 +1,13 @@
 //! The two steps of the account search: looking at the public accounts of the next five, at once,
 //! and keeping the accounts found with their notes recorded from the history already fetched.
 
+use super::deposit_site::active_site;
 use super::sync_each::sync_account;
 use super::Wallet;
 use crate::error::WalletError;
 use crate::evm::{used, Network};
 use crate::net::tor::{as_account, Tor};
+use crate::wallet::deposit_recover::recovered_deposits;
 use crate::wallet::{scan_history, History};
 use std::sync::atomic::Ordering;
 
@@ -43,19 +45,24 @@ impl Wallet {
         })
     }
 
-    /// Whether each candidate from `from` to `to` was paid a note in `history`. Only the accounts
-    /// the search reaches are tried, since each costs a key agreement per note in the pool.
+    /// Whether each candidate from `from` to `to` was paid a note or made a deposit in `history`.
+    /// Only the accounts the search reaches are tried, since each costs a key agreement per note
+    /// in the pool and a hash per deposit value at each index tried.
     pub(super) fn paid_from(
         &self,
         history: &History,
         from: usize,
         to: usize,
     ) -> Result<Vec<bool>, WalletError> {
+        let site = active_site()?;
         self.with(|s| {
             let reached = s.candidates().get(from..to).unwrap_or(&[]);
             reached
                 .iter()
-                .map(|c| !scan_history(history, c.account(), &[], &[]).received.is_empty())
+                .map(|c| {
+                    let paid = !scan_history(history, c.account(), &[], &[]).received.is_empty();
+                    paid || !recovered_deposits(history, c.account(), &site, 0).is_empty()
+                })
                 .collect()
         })
     }

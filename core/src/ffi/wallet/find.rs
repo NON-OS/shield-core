@@ -1,5 +1,5 @@
 //! After a restore, finding the accounts the phrase was used with, five at a time over their own
-//! circuits while the history is fetched. An account with a note or any public use counts, and
+//! circuits while the history is fetched. An account with a note, a deposit or any public use counts, and
 //! the search stops after five empty accounts in a row.
 
 use super::Wallet;
