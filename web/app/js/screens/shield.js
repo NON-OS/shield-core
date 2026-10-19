@@ -58,7 +58,7 @@ export function shield() {
           "div",
           { class: "balance" },
           h("span", {}, coin.toUpperCase()),
-          h("span", { class: "amount" }, b ? b.spendableText : "–"),
+          h("span", { class: "amount" }, b ? b.spendableText : "·"),
         );
       }),
       h("p", { class: "muted" }, caption(balances)),

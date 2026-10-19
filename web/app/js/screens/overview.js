@@ -69,7 +69,7 @@ export function overview() {
           "div",
           { class: "balance" },
           h("span", {}, label),
-          h("span", { class: "amount" }, held ? held[key] : "–"),
+          h("span", { class: "amount" }, held ? held[key] : "·"),
         ),
       ),
       h("p", { class: "muted" }, held ? "Read from a public endpoint" : "Not read yet"),
