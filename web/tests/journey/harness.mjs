@@ -5,6 +5,7 @@
 import { spawn } from "node:child_process";
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
+import { title } from "../title.mjs";
 
 export async function serve(site, port) {
   const script = new URL("../../scripts/serve.mjs", import.meta.url).pathname;
@@ -33,7 +34,7 @@ export async function open(browser, base, wordsFile) {
   const w = {
     page,
     heading: (name, timeout = 30 * 60 * 1000) =>
-      page.getByRole("heading", { level: 1, name }).waitFor({ timeout }),
+      page.getByRole("heading", { level: 1, name: title(name) }).waitFor({ timeout }),
     click: (name) => page.getByRole("button", { name, exact: true }).click(),
     fill: (label, value) => page.getByLabel(label, { exact: true }).fill(value),
     text: (value, timeout = 30 * 60 * 1000) => page.getByText(value).first().waitFor({ timeout }),

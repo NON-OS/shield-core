@@ -10,6 +10,7 @@
 
 import { spawn } from "node:child_process";
 import { chromium, devices } from "playwright";
+import { title } from "./title.mjs";
 
 const site = process.argv[2];
 const port = 8815;
@@ -49,7 +50,7 @@ async function device(options, prf = true) {
     },
   });
   const heading = (name) =>
-    page.getByRole("heading", { level: 1, name }).waitFor({ timeout: 15 * 60 * 1000 });
+    page.getByRole("heading", { level: 1, name: title(name) }).waitFor({ timeout: 15 * 60 * 1000 });
   const click = (name) => page.getByRole("button", { name, exact: true }).click();
   await page.goto(`${base}/`);
   await heading("Before you start");
@@ -65,7 +66,7 @@ async function device(options, prf = true) {
   const said = await d.page.getByRole("alert").textContent();
   expect(said.includes("cannot derive a secret"), "a passkey without PRF is refused");
   expect(
-    !(await d.page.getByRole("heading", { name: "Recovery phrase" }).count()),
+    !(await d.page.getByRole("heading", { name: title("Recovery phrase") }).count()),
     "no wallet is made without PRF",
   );
   await d.context.close();
@@ -90,10 +91,12 @@ async function device(options, prf = true) {
     "a phone has no Prove button before a test proof",
   );
   await d.click("Time a test proof");
-  await d.heading("Time a proof");
+  await d.heading("Measure");
   await d.click("Time one proof");
-  await d.page.getByText("This device can prove.").waitFor({ timeout: 15 * 60 * 1000 });
-  const seconds = await d.page.locator("dd").first().textContent();
+  await d.page
+    .getByText("A real transfer, proved on this device.")
+    .waitFor({ timeout: 15 * 60 * 1000 });
+  const seconds = await d.page.locator(".figure .number").textContent();
   console.log(`test proof on the phone profile: ${seconds}`);
   await d.click("Back");
   await d.heading("Settings");
@@ -145,7 +148,7 @@ async function device(options, prf = true) {
     (await d.page.locator("ol.words li").count()) === 24,
     "the recovery words show after the passkey",
   );
-  await d.click("Hide and go back");
+  await d.click("Back");
   await d.heading("Settings");
   await d.click("Back");
   await d.heading("Wallet");
@@ -157,7 +160,7 @@ async function device(options, prf = true) {
   await d.click("Back");
   await d.click("Settings");
   await d.click("Destroy this wallet");
-  await d.heading("Destroy this wallet");
+  await d.page.getByRole("button", { name: "Destroy it" }).waitFor();
   await d.click("Destroy it");
   await d.heading("NØNOS");
   await d.page.reload();
