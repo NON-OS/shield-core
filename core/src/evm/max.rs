@@ -15,6 +15,12 @@ use crate::net::tor::Tor;
 /// use on mainnet, 221,000.
 const SWAP_GAS: u128 = 300_000;
 
+/// An address with no account on either chain, the same for every wallet, so
+/// an estimate of one wei to it is what a send that creates an account takes
+/// and tells a server nothing about who asks. If someone funds it, the reserve
+/// still never falls under `SWAP_GAS`.
+const UNUSED: [u8; 20] = *b"nox-shield-unused-to";
+
 /// The reserve is priced at half again the latest fee ceiling, so a few blocks
 /// of a rising base fee do not leave a Max send short.
 const FEE_ROOM_NUM: u128 = 3;
@@ -25,9 +31,7 @@ pub fn max_spend(tor: &Tor, network: Network, of: &[u8; 20], coin: Coin) -> Resu
     let mut calls = vec![balance(of), latest_block(), priority_fee()];
     match chain.token(coin) {
         Some(token) => calls.push(call(None, &token, &with_address(BALANCE_OF, of))),
-        // A transfer of one wei to an address drawn here, so the estimate is
-        // what a send to an account that does not exist yet would take.
-        None => calls.push(estimate(of, &unused_address()?, 1, &[])),
+        None => calls.push(estimate(of, &UNUSED, 1, &[])),
     }
     let answers = ask(tor, &chain, &calls)?;
     let at = |i: usize| answers.get(i).ok_or(NetError::ReplyShape);
@@ -43,10 +47,4 @@ pub fn max_spend(tor: &Tor, network: Network, of: &[u8; 20], coin: Coin) -> Resu
         .map_or(super::gas::ETHER_CEILING, u128::from);
     let room = fee.saturating_mul(FEE_ROOM_NUM).checked_div(FEE_ROOM_DEN).unwrap_or(u128::MAX);
     Ok(ether.saturating_sub(SWAP_GAS.max(transfer).saturating_mul(room)))
-}
-
-fn unused_address() -> Result<[u8; 20], NetError> {
-    let mut a = [0u8; 20];
-    crate::entropy::fill(&mut a).map_err(|_| NetError::Transport)?;
-    Ok(a)
 }
