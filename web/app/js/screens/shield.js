@@ -1,10 +1,13 @@
 import { h } from "../ui/h.js";
 import { frame } from "../ui/frame.js";
 import { button } from "../ui/button.js";
-import { facts } from "../ui/facts.js";
+import { coinRow } from "../ui/coin-row.js";
 import { meter } from "../ui/meter.js";
-import { networkBanner } from "../ui/network-banner.js";
+import { quiet } from "../ui/quiet.js";
+import { roundAction } from "../ui/round-action.js";
 import { app } from "../state/app.js";
+import { inFlight } from "../state/in-flight.js";
+import { landing } from "./landing.js";
 
 function caption(balances) {
   const pending = balances.find((b) => b.pending > 0);
@@ -13,10 +16,10 @@ function caption(balances) {
   if (app.chain.received === 0 && app.chain.deposited === 0)
     return "Nothing received at this address yet";
   if (balances.every((b) => b.spendable === 0)) return "Every note found here has been spent";
-  return "Shielded, in this browser";
+  return "Shielded, on this device";
 }
 
-async function sync() {
+export async function sync() {
   const chain = await app.run(() => app.call("syncChain"));
   if (!chain) return;
   app.chain = chain;
@@ -27,77 +30,99 @@ async function sync() {
 export function shield() {
   if (app.network !== "sepolia") {
     return frame(
-      "03",
-      "Shield",
-      networkBanner(app.network),
+      {
+        number: "03",
+        title: "Shield",
+        backdrop: "deposit",
+        back: () => app.show("overview"),
+        footer: [
+          button("Switch to Sepolia", async () => {
+            app.network = "sepolia";
+            await app.store.setMeta("network", "sepolia");
+            app.show("shield");
+          }),
+        ],
+      },
       h("p", { class: "statement" }, "The shield runs on Sepolia until its audit."),
-      h(
-        "div",
-        { class: "actions" },
-        button("Switch to Sepolia", async () => {
-          app.network = "sepolia";
-          await app.store.setMeta("network", "sepolia");
-          app.show("shield");
-        }),
-        button("Back", () => app.show("overview"), { kind: "outline" }),
-      ),
     );
   }
   const balances = app.shielded ?? [];
+  const of = (coin) => balances.find((x) => x.coin === coin)?.spendableText ?? "·";
   const spendable = balances.some((b) => b.spendable > 0);
+  const details = app.params.details;
   return frame(
-    "03",
-    "Shield",
-    networkBanner("sepolia"),
+    { number: "03", title: "Shield", backdrop: "deposit", back: () => app.show("overview") },
     h(
       "section",
       { class: "tile", "aria-label": "Shielded balances" },
-      ["nox", "eth"].map((coin) => {
-        const b = balances.find((x) => x.coin === coin);
-        return h(
-          "div",
-          { class: "balance" },
-          h("span", {}, coin.toUpperCase()),
-          h("span", { class: "amount" }, b ? b.spendableText : "·"),
-        );
-      }),
-      h("p", { class: "muted" }, caption(balances)),
+      coinRow("nox", of("nox"), caption(balances)),
+      coinRow("eth", of("eth")),
     ),
     spendable && meter(app.chain),
+    app.spend && landing(app.spend),
     h(
       "nav",
       { class: "round", "aria-label": "Shield actions" },
-      button("Deposit", () => app.show("deposit")),
-      button("Receive", () => app.show("receive")),
-      button("Send", () => app.show("spend", { withdraw: false })),
-      button("Withdraw", () => app.show("spend", { withdraw: true })),
+      roundAction("Deposit", "in", () => app.show("deposit")),
+      roundAction("Receive", "down", () => app.show("receive")),
+      roundAction("Send", "up", () => app.show("spend", { withdraw: false })),
+      roundAction("Withdraw", "out", () => app.show("spend", { withdraw: true })),
     ),
-    h(
-      "div",
-      { class: "actions" },
-      button("Read the pool", sync, { kind: "outline", busy: "Reading the pool" }),
-      balances.some((b) => b.pending > 0) &&
-        button(
-          "Take back what was never settled",
-          () =>
-            app.run(async () => {
-              await app.call("takeBackPending");
-              await sync();
-            }),
-          { kind: "outline", busy: "Taking back" },
+    quiet([
+      [
+        app.params.syncing ? "Reading the pool" : "Read the pool",
+        async () => {
+          app.params.syncing = true;
+          app.draw();
+          await sync();
+          app.params.syncing = false;
+          app.draw();
+        },
+      ],
+      balances.some((b) => b.pending > 0) && [
+        "Take back what was never settled",
+        () =>
+          app.run(async () => {
+            await app.call("takeBackPending");
+            await inFlight.clear(app);
+            app.spend = null;
+            await sync();
+          }),
+      ],
+      ["Time a proof in this browser", () => app.show("measure")],
+      [
+        details ? "Hide details" : "Details",
+        () => app.show("shield", { details: !details, entered: true }),
+      ],
+    ]),
+    details &&
+      h(
+        "section",
+        { class: "tile", "aria-label": "Details" },
+        h(
+          "div",
+          { class: "tile-row" },
+          h("span", { class: "name" }, "Pool read at block"),
+          h("span", { class: "value" }, app.chain ? String(app.chain.head) : "none yet"),
         ),
-    ),
-    app.chain &&
-      facts([
-        ["pool read at block", String(app.chain.head)],
-        ["notes held", String(balances.reduce((n, b) => n + b.noteCount, 0))],
-        ["key held in", "a passkey"],
-      ]),
-    h("button", { type: "button", class: "link", onclick: () => app.show("overview") }, "Back"),
+        h(
+          "div",
+          { class: "tile-row" },
+          h("span", { class: "name" }, "Notes held"),
+          h("span", { class: "value" }, String(balances.reduce((n, b) => n + b.noteCount, 0))),
+        ),
+        h(
+          "div",
+          { class: "tile-row" },
+          h("span", { class: "name" }, "Key held in"),
+          h("span", { class: "value" }, "a passkey"),
+        ),
+      ),
   );
 }
 
-/** The balances last stored, before the pool is read again. */
+/** The balances last stored, and any spend still to settle, before the pool is read again. */
 shield.enter = async () => {
   app.shielded = await app.call("balances").catch(() => app.shielded);
+  app.spend = await inFlight.get(app);
 };

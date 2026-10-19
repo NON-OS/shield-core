@@ -10,22 +10,24 @@ export function wipe() {
       await app.call("wipe").catch(() => undefined);
       await app.store.wipe();
       await app.wallet.restart();
-      app.chain = app.shielded = app.public = app.accounts = null;
+      app.chain = app.shielded = app.public = app.accounts = app.spend = null;
       app.show("welcome");
     });
   return frame(
-    "04",
-    "Destroy this wallet",
+    {
+      number: "04",
+      title: "Settings",
+      backdrop: "settings",
+      back: () => app.show(back),
+      footer: [
+        button("Keep this wallet", () => app.show(back)),
+        button("Destroy it", destroy, { kind: "outline", busy: "Destroying" }),
+      ],
+    },
     h(
       "p",
       { class: "statement" },
-      "This removes the seed, the notes and the key that seals them from this browser. The recovery words are the only way back. Without them the balance is gone.",
-    ),
-    h(
-      "div",
-      { class: "actions" },
-      button("Keep this wallet", () => app.show(back)),
-      button("Destroy it", destroy, { kind: "outline", busy: "Destroying" }),
+      "This removes the seed, the notes and the key that seals them from this device. The 24 words are the only way back. Without them the balance is gone.",
     ),
   );
 }

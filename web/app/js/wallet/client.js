@@ -66,6 +66,11 @@ export class Wallet {
     return bytes && Uint8Array.from(bytes);
   }
 
+  /** Whether a call is still running, so background work can wait its turn. */
+  busy() {
+    return this.#waiting.size > 0;
+  }
+
   call(method, ...args) {
     return this.#send({ op: "call", method, args });
   }

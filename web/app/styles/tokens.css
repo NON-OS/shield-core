@@ -1,21 +1,27 @@
-/* The NØNOS palette in its light form. Cyan is too light to carry text on white, so it only ever
-   fills, behind ink; teal carries the links and the marks that need colour. */
+/* The apps' palette and sizes, from their Palette, Room and Edge: ink ground, paper text, cyan for
+   what acts. Sizes are the iOS ones at its 1.25 scale, so a CSS pixel is an iOS point. */
 :root {
   --ink: #0a0b0d;
-  --paper: #ffffff;
-  --surface: #f3f5f6;
-  --line: #d9dee1;
-  --muted: #545a60;
+  --paper: #f2f3f7;
+  --surface: #101215;
+  --muted: #87888b;
+  --line: #1f2022;
+  --rule: rgb(255 255 255 / 12%);
+  --raised: rgb(255 255 255 / 8%);
   --cyan: #66ffff;
-  --teal: #007c85;
-  --bad: #b3261e;
-  --radius: 14px;
-  --action: 52px;
-  --gutter: 16px;
-  --column: 34rem;
+  --bad: #ff8a8a;
+  --usdc: #2775ca;
+  --card: 14px;
+  --edge: 2px;
+  --action: 58px;
+  --side: 24px;
+  --room: 28px;
+  --gap: 26px;
+  --tight: 12px;
+  --column: 36rem;
   --prose: "Geist", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 @font-face {

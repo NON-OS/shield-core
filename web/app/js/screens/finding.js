@@ -24,17 +24,15 @@ async function look() {
 }
 
 export function finding() {
-  const count = h("span", { id: "looked" }, "Looked at 0 so far.");
   // Drawn again on any change, so the search starts only on the first draw.
   app.params.looking ??= look();
   return frame(
-    "01",
-    "Restore a wallet",
+    { number: "01", title: "Restore a wallet", backdrop: "backup" },
     h(
       "p",
       { class: "lead", role: "status", "aria-live": "polite" },
       "Looking for the other accounts these words were used with. ",
-      count,
+      h("span", { id: "looked" }, "Looked at 0 so far."),
     ),
     h("div", { class: "progress", "aria-hidden": "true" }, h("span")),
   );

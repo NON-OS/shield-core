@@ -22,6 +22,7 @@ import { measure } from "./measure.js";
 import { licences } from "./licences.js";
 import { release } from "./release.js";
 import { wipe } from "./wipe.js";
+import { install } from "./install.js";
 
 export const screens = {
   opening,
@@ -46,4 +47,5 @@ export const screens = {
   licences,
   release,
   wipe,
+  install,
 };
