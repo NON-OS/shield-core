@@ -13,9 +13,10 @@ const fresh = [
   "/manifest.webmanifest",
 ];
 
-export function pagesHeaders(connect, dir) {
+export function pagesHeaders(connect, mixnet, dir) {
   const lines = ["/*"];
-  for (const [name, value] of Object.entries(headers(connect))) lines.push(`  ${name}: ${value}`);
+  for (const [name, value] of Object.entries(headers(connect, mixnet)))
+    lines.push(`  ${name}: ${value}`);
   lines.push("", `/${dir}/*`, "  Cache-Control: public, max-age=31536000, immutable");
   for (const path of fresh) lines.push("", path, "  Cache-Control: no-cache");
   return `${lines.join("\n")}\n`;

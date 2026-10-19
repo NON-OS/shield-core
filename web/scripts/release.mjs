@@ -26,6 +26,7 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { pagesHeaders } from "./pages-headers.mjs";
 import { licences } from "./licences.mjs";
+import { nym } from "./nym.mjs";
 
 const out = process.argv[2];
 const dev = process.argv.includes("--dev");
@@ -52,6 +53,7 @@ for (const form of ["threads", "single"]) {
 const single = await import(join(work, "single/pkg/nox_shield_web.js"));
 single.initSync({ module: readFileSync(join(work, "single/pkg/nox_shield_web_bg.wasm")) });
 const connect = JSON.parse(single.endpoint_hosts());
+const mixnet = nym.sources();
 const entropy = Uint8Array.from(
   Buffer.from(readFileSync(join(vector, "entropy.hex"), "utf8").trim(), "hex"),
 );
@@ -80,6 +82,9 @@ for (const file of walk(app)) {
   cpSync(file, join(stage, path));
 }
 cpSync(join(work, "threads/pkg"), join(stage, "pkg"), { recursive: true });
+mkdirSync(join(stage, "nym"), { recursive: true });
+for (const [name, bytes] of Object.entries(nym.files(web)))
+  writeFileSync(join(stage, "nym", name), bytes);
 mkdirSync(join(stage, "prover/vector"), { recursive: true });
 for (const name of ["request.json", "seed.json", "entropy.hex"]) {
   cpSync(join(vector, name), join(stage, "prover/vector", name));
@@ -129,7 +134,7 @@ writeFileSync(
 const webManifest = JSON.parse(readFileSync(join(app, "manifest.webmanifest"), "utf8"));
 webManifest.icons = webManifest.icons.map((icon) => ({ ...icon, src: at(icon.src) }));
 writeFileSync(join(out, "manifest.webmanifest"), `${JSON.stringify(webManifest, null, 2)}\n`);
-writeFileSync(join(out, "_headers"), pagesHeaders(connect, dir));
+writeFileSync(join(out, "_headers"), pagesHeaders(connect, mixnet, dir));
 cpSync(join(web, "release/README.md"), join(out, "README.md"));
 
 const served = listing(out).filter((f) => f.path !== "_headers");
@@ -138,6 +143,8 @@ const manifest = {
   commit,
   dir,
   connect,
+  mixnet,
+  nym: { ...nym.versions, commit: nym.commit },
   cache: {
     sha256: sha256(cache),
     chunks: chunks.map((c) => ({ path: at(c.name), sha256: c.sha256 })),

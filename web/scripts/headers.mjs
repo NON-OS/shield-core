@@ -1,12 +1,14 @@
 // The response headers every file of the site is served with, from the list of endpoints the core
-// may reach. The development server and the Cloudflare Pages `_headers` file are both made from
-// this, so what is tested is what is deployed.
+// may reach and the hosts of the mixnet. The development server and the Cloudflare Pages
+// `_headers` file are both made from this, so what is tested is what is deployed.
 //
-// COOP and COEP make the page cross-origin isolated, the only way a browser hands it shared memory
-// and so the threaded prover. The CSP allows script, style, fonts and workers from the site alone;
-// 'wasm-unsafe-eval' lets it compile its own wasm and nothing else; connections go to the site
-// and to the listed endpoints only. HSTS covers this host and not its parent zone, whose other
-// hosts are not this site's to bind.
+// COOP and COEP make the page cross-origin isolated, the only way a browser hands it shared memory:
+// for the threaded prover, and for the wallet's worker to wait on its requests. The CSP allows
+// script, style, fonts and workers from the site alone; 'wasm-unsafe-eval' lets it compile its own
+// wasm and the mixnet client's, and nothing else; connections go to the site, to Nym's directory
+// and pinned gateways, and to the listed endpoints, which the page reaches only when the user has
+// chosen to connect directly. HSTS covers this host and not its parent zone, whose other hosts are
+// not this site's to bind.
 
 const unused = [
   "accelerometer",
@@ -31,7 +33,7 @@ const unused = [
   "xr-spatial-tracking",
 ];
 
-export function headers(connect) {
+export function headers(connect, mixnet = []) {
   return {
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Embedder-Policy": "require-corp",
@@ -40,7 +42,7 @@ export function headers(connect) {
       "default-src 'self'",
       "script-src 'self' 'wasm-unsafe-eval'",
       "worker-src 'self'",
-      `connect-src 'self' ${connect.map((host) => `https://${host}`).join(" ")}`,
+      ["connect-src 'self'", ...mixnet, ...connect.map((host) => `https://${host}`)].join(" "),
       "img-src 'self' data:",
       "style-src 'self'",
       "font-src 'self'",
