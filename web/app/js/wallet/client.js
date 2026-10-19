@@ -1,5 +1,6 @@
 // The page's side of the wallet worker: each call a promise of its parsed answer, or of a
-// WalletFailure naming the stage that refused.
+// WalletFailure naming the stage that refused. Each worker is started with a port of its own for
+// the requests the core makes, which `route` answers.
 
 import { WalletFailure } from "./failure.js";
 
@@ -9,9 +10,11 @@ export class Wallet {
   #waiting = new Map();
   #url;
   #options;
+  #route;
 
-  constructor(url) {
+  constructor(url, route) {
     this.#url = url;
+    this.#route = route;
   }
 
   #spawn() {
@@ -23,6 +26,13 @@ export class Wallet {
       if ("ok" in data) p.resolve(data.ok === undefined ? null : JSON.parse(data.ok));
       else p.reject(new WalletFailure(JSON.parse(data.failure)));
     };
+  }
+
+  #start() {
+    const { port1, port2 } = new MessageChannel();
+    this.#route(port2);
+    const { threads, cache } = this.#options;
+    return this.#send({ op: "start", threads, cache: cache.slice(), port: port1 }, [port1]);
   }
 
   #send(message, transfer = []) {
@@ -37,7 +47,7 @@ export class Wallet {
   async start({ threads, cache }) {
     this.#options = { threads, cache };
     this.#spawn();
-    return this.#send({ op: "start", threads, cache: cache.slice() });
+    return this.#start();
   }
 
   /** Give the core the passkey's secret for the next create, restore or unlock. */
@@ -85,6 +95,6 @@ export class Wallet {
     for (const p of this.#waiting.values()) p.reject(stopped);
     this.#waiting.clear();
     this.#spawn();
-    return this.#send({ op: "start", ...this.#options, cache: this.#options.cache.slice() });
+    return this.#start();
   }
 }

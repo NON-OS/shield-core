@@ -1,5 +1,6 @@
 // The page's start: check what this browser can do, start the wallet's worker with the shipped
-// periodic cache, and show the first screen. Nothing here reaches the network but this site.
+// periodic cache and the route for its requests, and show the first screen. Nothing here reaches
+// the network but this site; the mixnet's tunnel starts with the wallet's first request.
 
 import { app } from "./state/app.js";
 import { screens } from "./screens/index.js";
@@ -12,6 +13,9 @@ import { watchOnline } from "./state/online.js";
 import { watchInstall } from "./state/install.js";
 import { watchIdle } from "./state/idle.js";
 import { watchScan } from "./state/scan.js";
+import { Tunnel } from "./route/tunnel.js";
+import { bridge } from "./route/bridge.js";
+import { nymHosts } from "./route/hosts.js";
 
 const root = document.querySelector("main");
 
@@ -43,7 +47,13 @@ async function boot() {
   if (!(await screens.welcome.possible())) return app.show("unsupported");
   const cache = await loadCache(manifest.cache);
   app.cacheReady = Boolean(cache);
-  app.wallet = new Wallet(new URL("./wallet/worker.js", import.meta.url));
+  app.tunnel = new Tunnel(new URL("./route/worker.js", import.meta.url), nymHosts.gateways);
+  // Only Settings shows the tunnel's state, and a redraw elsewhere would clear a field being typed.
+  const redraw = () => app.screen === "settings" && app.draw();
+  app.wallet = new Wallet(
+    new URL("./wallet/worker.js", import.meta.url),
+    bridge(app.tunnel, redraw),
+  );
   const stored = await app.wallet.start({
     threads: app.proving.threads,
     cache: cache ?? new Uint8Array(),

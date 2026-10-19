@@ -1,15 +1,21 @@
 // The wallet's worker. It holds the native core, loads the stored files into it before the first
 // call and stores what each call changed. The core blocks here on its requests and on the proof,
 // which a page's main thread may not do, so the page talks to it only through messages.
+//
+// The core sends each request with the browser's synchronous XMLHttpRequest. Here that name is
+// the stand-in that hands the request to the page, which carries it through the mixnet, so the
+// core's transport is unchanged and no request leaves this worker by itself.
 
 import init, * as core from "../../pkg/nox_shield_web.js";
 import { openStore } from "./store.js";
+import { syncRequest } from "./sync-request.js";
 
 const DIR = "/shield";
 let wallet = null;
 let store = null;
 let memory = null;
 let cache = null;
+let requests = null;
 
 const unhex = (h) => Uint8Array.from(h.match(/../g) ?? [], (b) => parseInt(b, 16));
 
@@ -21,7 +27,9 @@ async function persist() {
   await store.apply(changes);
 }
 
-async function start({ threads, cache: top }) {
+async function start({ threads, cache: top, port }) {
+  requests = syncRequest(port, XMLHttpRequest);
+  self.XMLHttpRequest = requests.Request;
   memory = (await init()).memory;
   cache = top;
   if (threads > 0) await core.initThreadPool(threads);
@@ -62,6 +70,7 @@ async function time() {
 }
 
 async function call({ method, args }) {
+  requests.next();
   try {
     return { ok: wallet.call(method, args.map(String)) };
   } catch (e) {
@@ -89,6 +98,7 @@ onmessage = async ({ data }) => {
         reply({ ok: await time() });
         break;
       case "searchStart":
+        requests.next();
         wallet.search_start();
         reply({ ok: "null" });
         break;
