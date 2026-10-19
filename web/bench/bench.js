@@ -9,7 +9,11 @@ const out = document.getElementById("out");
 
 const worker = new Worker(new URL("./bench-worker.js", import.meta.url), { type: "module" });
 worker.onmessage = ({ data }) => {
-  window.benchResult = { isolated: globalThis.crossOriginIsolated, cores: navigator.hardwareConcurrency, ...data };
+  window.benchResult = {
+    isolated: globalThis.crossOriginIsolated,
+    cores: navigator.hardwareConcurrency,
+    ...data,
+  };
   out.textContent = JSON.stringify({ ...window.benchResult, proof: undefined }, null, 1);
 };
 worker.onerror = (e) => {
