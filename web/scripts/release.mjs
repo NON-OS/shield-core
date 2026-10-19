@@ -25,6 +25,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { pagesHeaders } from "./pages-headers.mjs";
+import { licences } from "./licences.mjs";
 
 const out = process.argv[2];
 const dev = process.argv.includes("--dev");
@@ -83,6 +84,10 @@ mkdirSync(join(stage, "prover/vector"), { recursive: true });
 for (const name of ["request.json", "seed.json", "entropy.hex"]) {
   cpSync(join(vector, name), join(stage, "prover/vector", name));
 }
+const linked = licences(core);
+mkdirSync(join(stage, "licences"), { recursive: true });
+writeFileSync(join(stage, "licences/licences.txt"), linked.list);
+writeFileSync(join(stage, "licences/licence-texts.txt"), linked.texts);
 const chunks = [];
 for (let at = 0, n = 0; at < cache.length; at += CHUNK, n++) {
   const part = cache.subarray(at, at + CHUNK);
@@ -113,7 +118,14 @@ const page = readFileSync(join(app, "index.html"), "utf8").replace(
     path === "manifest.webmanifest" ? `${attr}="${path}"` : `${attr}="${at(path)}"`,
 );
 writeFileSync(join(out, "index.html"), page);
-cpSync(join(app, "sw.js"), join(out, "sw.js"));
+// Every release is a new worker, so the browser installs it and the page can offer the update.
+const worker = readFileSync(join(app, "sw.js"), "utf8");
+if (!worker.includes('const RELEASE = "release-directory";'))
+  throw new Error("sw.js has no release slot");
+writeFileSync(
+  join(out, "sw.js"),
+  worker.replace('const RELEASE = "release-directory";', `const RELEASE = "${dir}";`),
+);
 const webManifest = JSON.parse(readFileSync(join(app, "manifest.webmanifest"), "utf8"));
 webManifest.icons = webManifest.icons.map((icon) => ({ ...icon, src: at(icon.src) }));
 writeFileSync(join(out, "manifest.webmanifest"), `${JSON.stringify(webManifest, null, 2)}\n`);
