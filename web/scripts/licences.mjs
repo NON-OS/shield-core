@@ -1,7 +1,8 @@
 // The licences of what the browser build links, as the apps list theirs: one line per crate,
 // "name version : licence", from cargo's own view of the wasm dependency graph with threads, then
-// the two fonts; and the full texts each crate ships, one block per crate, separated by a form
-// feed. Paths on the building machine never appear.
+// the mixnet client's, kept in web/nym by nym-licences.mjs, then the two fonts; and the full texts
+// each ships, one block per crate, separated by a form feed. Paths on the building machine never
+// appear.
 
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
@@ -38,7 +39,8 @@ export function licences(core) {
     meta.packages.map((p) => [`${p.name} ${p.version}`, dirname(p.manifest_path)]),
   );
   const keys = [...crates.keys()].sort();
-  const list = [...keys.map((k) => `${k} : ${crates.get(k)}`), ...fonts].join("\n");
+  const mixnet = (name) => readFileSync(join(core, "web/nym", name), "utf8").trim();
+  const list = [...keys.map((k) => `${k} : ${crates.get(k)}`), mixnet("licences.txt"), ...fonts];
   const blocks = [];
   for (const key of keys) {
     const dir = where.get(key);
@@ -49,5 +51,6 @@ export function licences(core) {
     for (const file of files)
       blocks.push(`${key}, ${file}\n\n${readFileSync(join(dir, file), "utf8").trim()}`);
   }
-  return { list: `${list}\n`, texts: `${blocks.join("\n\f\n")}\n` };
+  blocks.push(mixnet("licence-texts.txt"));
+  return { list: `${list.join("\n")}\n`, texts: `${blocks.join("\n\f\n")}\n` };
 }

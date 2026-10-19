@@ -9,7 +9,8 @@ cd "$(dirname "$0")/.."
 export LC_ALL=C.UTF-8
 
 mapfile -d '' tracked < <(git ls-files -z | grep -zv -e '^vendor/' -e '^ci/verify-kit/lib/' \
-    -e '^fuzz/corpus/' -e 'Cargo\.lock$' -e 'package-lock\.json$' -e '^scripts/check-text\.sh$')
+    -e '^fuzz/corpus/' -e 'Cargo\.lock$' -e 'package-lock\.json$' -e '^scripts/check-text\.sh$' \
+    -e '^web/nym/licence-texts\.txt$')
 # Text files only: -I passes over anything binary, such as the figures and the fonts.
 mapfile -d '' text < <(grep -IlZ '' -- "${tracked[@]}" || true)
 
