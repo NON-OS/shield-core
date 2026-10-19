@@ -18,6 +18,7 @@ const b = await browser();
 const say = (fact) => console.log(`${new Date().toISOString()} ${step}: ${fact}`);
 
 async function publicAddress(w) {
+  await w.ready();
   await w.click("Receive");
   await w.heading("Receive");
   const nox1 = await w.page.locator(".value-block .visually-hidden").textContent();
@@ -31,6 +32,7 @@ async function publicAddress(w) {
 }
 
 async function readPool(w) {
+  await w.ready();
   if (!(await w.page.getByRole("button", { name: "Read the pool", exact: true }).count())) {
     await w.click("Shield");
     await w.heading("Shield");
@@ -67,6 +69,7 @@ async function mined(w, line) {
 }
 
 async function spend(w, { withdraw, to, amount }) {
+  await w.ready();
   await w.click(withdraw ? "Withdraw" : "Send");
   await w.heading(withdraw ? "Withdraw" : "Send");
   await w.page.locator("#coin").selectOption("eth");
@@ -137,28 +140,33 @@ if (step === "gas") {
 // both wallets stay open in their own browser context until the journey ends.
 if (step === "shield") {
   const w = await open(b, base, wordsB);
-  const B = await publicAddress(w);
-  await readPool(a);
-  await a.click("Deposit");
-  await a.heading("Deposit");
-  await a.page.locator("#coin").selectOption("eth");
-  await a.page.locator("input").first().fill("0.02");
-  await a.click("Review");
-  await a.text("the note holds");
-  say(`note holds ${await a.page.locator("dd").nth(3).textContent()}`);
-  await a.click("Confirm and shield");
-  await a.text("Deposit sent. Waiting for a block.");
-  say(`deposit ${await a.page.locator(".value-block .visually-hidden").textContent()}`);
-  await mined(a, "Shielded.");
-  say("shielded, waiting for the pool to commit the root");
-  await a.click("Done");
-  await rooted(a);
-  await spend(a, { withdraw: false, to: B.nox1, amount: "0.005" });
-  await a.click("Done");
-  say(`B reads the pool, ETH shielded ${await readPool(w)}`);
-  await rooted(a);
-  const to = await spend(a, { withdraw: true, amount: "0.005" });
-  say(`withdrawn to a fresh address of A, ${to}`);
+  try {
+    const B = await publicAddress(w);
+    await readPool(a);
+    await a.click("Deposit");
+    await a.heading("Deposit");
+    await a.page.locator("#coin").selectOption("eth");
+    await a.page.locator("input").first().fill("0.02");
+    await a.click("Review");
+    await a.text("the note holds");
+    say(`note holds ${await a.page.locator("dd").nth(3).textContent()}`);
+    await a.click("Confirm and shield");
+    await a.text("Deposit sent. Waiting for a block.");
+    say(`deposit ${await a.page.locator(".value-block .visually-hidden").textContent()}`);
+    await mined(a, "Shielded.");
+    say("shielded, waiting for the pool to commit the root");
+    await a.click("Done");
+    await rooted(a);
+    await spend(a, { withdraw: false, to: B.nox1, amount: "0.005" });
+    await a.click("Done");
+    say(`B reads the pool, ETH shielded ${await readPool(w)}`);
+    await rooted(a);
+    const to = await spend(a, { withdraw: true, amount: "0.005" });
+    say(`withdrawn to a fresh address of A, ${to}`);
+  } catch (e) {
+    say(`stopped: A shows ${await a.seen()}; B shows ${await w.seen()}`);
+    throw e;
+  }
 }
 
 await b.close();

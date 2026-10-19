@@ -38,6 +38,26 @@ export async function open(browser, base, wordsFile) {
     click: (name) => page.getByRole("button", { name, exact: true }).click(),
     fill: (label, value) => page.getByLabel(label, { exact: true }).fill(value),
     text: (value, timeout = 30 * 60 * 1000) => page.getByText(value).first().waitFor({ timeout }),
+    // Bring this wallet's page to the front, and unlock it if it locked while another page was in
+    // front, as it does when hidden.
+    ready: async () => {
+      await page.bringToFront();
+      if (await page.getByRole("heading", { level: 1, name: title("Locked") }).count()) {
+        await page.getByRole("button", { name: "Unlock", exact: true }).click();
+        await page
+          .getByRole("heading", { level: 1, name: title("Wallet") })
+          .waitFor({ timeout: 120_000 });
+      }
+    },
+    // What the screen shows, for the log when a step stops.
+    seen: async () =>
+      `${await page
+        .locator("h1")
+        .textContent()
+        .catch(() => "")} | ${await page
+        .getByRole("alert")
+        .textContent()
+        .catch(() => "no failure shown")}`,
   };
   await page.goto(`${base}/`);
   await w.heading("Before you start");
