@@ -93,7 +93,8 @@ mod tests {
     use super::*;
 
     // thirdweb's public hosts now answer a request without a key with a
-    // rate-limit notice, so every list falls through them.
+    // rate-limit notice, so every list falls through them. Sepolia keeps three
+    // read servers, since a NOX review needs two that agree.
     #[test]
     fn each_list_is_tried_in_this_order() {
         assert_eq!(

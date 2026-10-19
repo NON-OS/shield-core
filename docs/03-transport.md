@@ -44,7 +44,7 @@ answers over Tor for its own chain.
 | Shielded pool history, Sepolia | `ethereum-sepolia-rpc.publicnode.com`, `rpc.sepolia.ethpandaops.io` | `core/src/net/pool.rs` |
 | Public account reads, Ethereum | `ethereum-rpc.publicnode.com`, `eth.rpc.blxrbdn.com`, `eth-mainnet.public.blastapi.io` | `core/src/evm/network.rs` |
 | Public account sends, Ethereum | `rpc.flashbots.net`, then `rpc.mevblocker.io` | same |
-| Public account reads, Sepolia | `ethereum-sepolia-rpc.publicnode.com`, `rpc.sepolia.ethpandaops.io` | same |
+| Public account reads, Sepolia | `ethereum-sepolia-rpc.publicnode.com`, `rpc.sepolia.ethpandaops.io`, `sepolia.gateway.tenderly.co` | same |
 | Public account sends, Sepolia | `ethereum-sepolia-rpc.publicnode.com`, `rpc.sepolia.ethpandaops.io` | same |
 
 On mainnet a signed transaction goes to a private relay, which keeps it out of the public mempool
