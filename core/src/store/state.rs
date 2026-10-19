@@ -14,8 +14,11 @@ pub struct StoreState {
     pending: BTreeMap<[u64; 4], crate::notes::NotePlaintext>,
     /// Notes held from another pool, marked at each sync and never written.
     pub(super) elsewhere: std::collections::BTreeSet<NoteKey>,
-    /// The first deposit index no kept deposit has drawn.
-    next_deposit: u32,
+    /// Every deposit index a kept or found deposit used, each with the count of index rows
+    /// folded when it was last written, so a review can tell whether its index was taken since.
+    used: BTreeMap<u32, u64>,
+    /// Index rows folded so far.
+    index_rows: u64,
 }
 
 /// One coin's balance in its note units, split into spendable now and in flight.
@@ -59,7 +62,8 @@ impl StoreState {
                 }
             }
             Row::DepositIndex(index) => {
-                self.next_deposit = self.next_deposit.max(index.saturating_add(1));
+                self.index_rows = self.index_rows.saturating_add(1);
+                self.used.insert(index, self.index_rows);
             }
         }
     }
@@ -74,9 +78,29 @@ impl StoreState {
         self.notes.values().collect()
     }
 
-    /// The first deposit index free to draw. It only grows, so an index is never drawn twice.
+    /// One past the highest deposit index used, or 0 before any.
     pub fn next_deposit(&self) -> u32 {
-        self.next_deposit
+        self.used.keys().next_back().map_or(0, |i| i.saturating_add(1))
+    }
+
+    /// Whether a kept or found deposit used index `index`.
+    pub fn deposit_used(&self, index: u32) -> bool {
+        self.used.contains_key(&index)
+    }
+
+    /// Every deposit index used, lowest first.
+    pub fn used_deposits(&self) -> impl Iterator<Item = u32> + '_ {
+        self.used.keys().copied()
+    }
+
+    /// A mark of the index rows folded so far, for `deposit_taken_since`.
+    pub fn deposit_stamp(&self) -> u64 {
+        self.index_rows
+    }
+
+    /// Whether index `index` was written after the mark `stamp` was taken.
+    pub fn deposit_taken_since(&self, index: u32, stamp: u64) -> bool {
+        self.used.get(&index).is_some_and(|at| *at > stamp)
     }
 
     /// Where the next scan should start.

@@ -5,7 +5,7 @@
 use super::account_view::VALID_FOR;
 use super::swap_view::{refused, shown};
 use super::{Pending, Wallet};
-use crate::error::{NetError, WalletError};
+use crate::error::WalletError;
 use crate::evm::swap::{review_swap, Swap, SwapChecked};
 use crate::evm::{self, Network};
 use crate::ffi::account_types::PublicSwap;
@@ -39,7 +39,7 @@ impl Wallet {
             shown(id, network, &swap, &review, u32::try_from(VALID_FOR.as_secs()).unwrap_or(0));
         let pending =
             Pending { id, network, from: account, tx: review.tx, made: Instant::now(), note: None };
-        *self.pending.lock().map_err(|_| NetError::Transport)? = Some(pending);
+        self.hold(pending)?;
         Ok(view)
     }
 }

@@ -13,6 +13,8 @@ pub(crate) struct Slot {
     pub(super) evm: EvmAccount,
     pub(super) log: NoteLog,
     pub(super) state: StoreState,
+    /// Deposit indices a review drew and has not kept, each until when and for which draw.
+    pub(super) reserved: std::collections::BTreeMap<u32, (std::time::Instant, u64)>,
 }
 
 impl Slot {
@@ -40,7 +42,7 @@ impl Slot {
     ) -> Result<Slot, WalletError> {
         let account = Account::at(seed, index)?;
         let (log, state) = NoteLog::open_account(paths.notes_of(index), seed, index)?;
-        Ok(Slot { account, evm, log, state })
+        Ok(Slot { account, evm, log, state, reserved: Default::default() })
     }
 
     pub(crate) fn account(&self) -> &Account {

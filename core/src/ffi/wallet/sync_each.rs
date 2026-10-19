@@ -20,9 +20,13 @@ pub(super) fn sync_account(
     let Some(slot) = s.at(index) else { return Ok([0; 3]) };
     let held = slot.state().held();
     let scan = scan_history(history, slot.account(), &slot.state().pending_deposits(), &held);
-    let next = slot.state().next_deposit();
+    // From index 0 each time: a hole below the last index used may be filled later, here or by
+    // another device on the same words.
     let (indices, recovered): (Vec<u32>, Vec<NoteRecord>) =
-        recovered_deposits(history, slot.account(), &active_site()?, next).into_iter().unzip();
+        recovered_deposits(history, slot.account(), &active_site()?, 0).into_iter().unzip();
+    let mut fresh_indices: Vec<u32> =
+        indices.into_iter().filter(|i| !slot.state().deposit_used(*i)).collect();
+    fresh_indices.dedup();
     let mut known: Vec<NoteKey> = held.iter().map(|n| n.key()).collect();
     let mut fresh = |n: &NoteRecord| {
         let new = !known.contains(&n.key());
@@ -40,9 +44,10 @@ pub(super) fn sync_account(
         spent.extend(spent_commitments(slot.account(), set, &published));
     }
     let found = [count(received.len()), count(deposited.len()), count(spent.len())];
-    // The highest index found is kept first, so a deposit drawn after this never reuses one.
-    if let Some(last) = indices.into_iter().max() {
-        s.record_to(index, Row::DepositIndex(last))?;
+    // Each index found is kept first, so no deposit drawn after this reuses one, and a review that
+    // drew one before this sync is refused at its yes.
+    for used in fresh_indices {
+        s.record_to(index, Row::DepositIndex(used))?;
     }
     for note in received.into_iter().chain(deposited) {
         s.record_to(index, Row::Found(note))?;

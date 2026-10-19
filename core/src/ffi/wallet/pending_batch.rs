@@ -6,4 +6,7 @@ pub(super) struct PendingBatch {
     pub(super) from: [u8; 20],
     pub(super) steps: Vec<(crate::evm::tx::Eip1559, u32, crate::notes::NotePlaintext)>,
     pub(super) made: std::time::Instant,
+    /// The store's mark when the indices were drawn, and the draw that reserved them.
+    pub(super) stamp: u64,
+    pub(super) draw: u64,
 }

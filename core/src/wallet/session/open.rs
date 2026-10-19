@@ -54,6 +54,7 @@ pub(super) fn build(
         watching,
         candidates: Vec::new(),
         leaves_seen: 0,
+        draws: 0,
         imported: key.is_some(),
         next_public: key.is_none().then(|| next_public(seed, book.count)).flatten(),
     })

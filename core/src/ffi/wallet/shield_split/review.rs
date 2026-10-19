@@ -5,7 +5,7 @@
 use super::super::deposit_site::active_site;
 use super::super::{PendingBatch, Wallet};
 use super::view::{plan, refused, ShieldSplit};
-use crate::error::{NetError, WalletError};
+use crate::error::WalletError;
 use crate::evm::shield_batch::{review_batch, BatchChecked, Deposit};
 use crate::evm::{self, Network};
 use crate::ffi::amount_read::parse_base_units;
@@ -37,10 +37,9 @@ impl Wallet {
                 "This pool takes these deposits one by one. Deposit each size alone.",
             ));
         }
-        // The review replaces any split held, so only a held single deposit keeps its index.
-        let held = self.held_by_single()?;
         let site = active_site()?;
-        let drawn = self.with(|s| s.draw_deposits(&site, sizes.len(), &held))??;
+        let draw = self.with_mut(|s| s.draw_deposits(&site, sizes.len(), Instant::now()))?;
+        let drawn = draw.drawn;
         let mut requests: Vec<DepositRequest> = Vec::with_capacity(sizes.len());
         for (size, (_, blinding)) in sizes.into_iter().zip(&drawn) {
             let base = u128::from(size).checked_mul(asset.scale).ok_or(WalletError::Amount)?;
@@ -64,8 +63,15 @@ impl Wallet {
         let view = plan(id, &requests, asset.scale, batch.max_network_fee);
         let notes = drawn.into_iter().zip(requests).map(|((index, _), r)| (index, r.note));
         let steps = batch.txs.into_iter().zip(notes).map(|(tx, (i, note))| (tx, i, note)).collect();
-        let held = PendingBatch { id, from, steps, made: Instant::now() };
-        *self.batch.lock().map_err(|_| NetError::Transport)? = Some(held);
+        let held = PendingBatch {
+            id,
+            from,
+            steps,
+            made: Instant::now(),
+            stamp: draw.stamp,
+            draw: draw.id,
+        };
+        self.hold_batch(held)?;
         Ok(view)
     }
 }

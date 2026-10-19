@@ -10,5 +10,13 @@ pub(super) struct Pending {
     pub(super) made: std::time::Instant,
     /// For a deposit, the index its blinding was drawn at and the note it creates, both stored
     /// before the deposit leaves.
-    pub(super) note: Option<(u32, crate::notes::NotePlaintext)>,
+    pub(super) note: Option<HeldDeposit>,
+}
+
+/// A reviewed deposit's index and note, and the draw that reserved the index.
+pub(super) struct HeldDeposit {
+    pub(super) index: u32,
+    pub(super) note: crate::notes::NotePlaintext,
+    pub(super) stamp: u64,
+    pub(super) draw: u64,
 }

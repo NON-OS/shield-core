@@ -13,6 +13,7 @@ use crate::net::rpc::RawLog;
 use crate::notes::NoteStatus;
 use crate::store::Row;
 use crate::wallet::{prepare_deposit, prepare_deposit_at, History, Paths, Session};
+use std::time::Instant;
 
 const CENT: u128 = 10_000_000_000_000_000;
 
@@ -66,12 +67,11 @@ fn history(commitments: &[[u8; 32]], nullifiers: &[[u8; 32]]) -> History {
 
 /// Wallet 1 draws and keeps a deposit the way a review and its yes do, and returns its leaf.
 fn deposit(s: &mut Session, amount: u128) -> [u8; 32] {
-    let [(index, blinding)] = <[_; 1]>::try_from(
-        s.draw_deposits(&active_site().expect("the pool"), 1, &[]).expect("drawn"),
-    )
-    .expect("one");
+    let site = active_site().expect("the pool");
+    let draw = s.draw_deposits(&site, 1, Instant::now()).expect("drawn");
+    let [(index, blinding)] = <[_; 1]>::try_from(draw.drawn).expect("one");
     let request = prepare_deposit_at(&s.address(), blinding, amount, 0, 50, 1).expect("a deposit");
-    s.keep_deposit(index, request.note).expect("kept");
+    s.keep_deposit(index, request.note, draw.stamp).expect("kept");
     request.commitment
 }
 

@@ -3,10 +3,11 @@
 //! send. The note travels with the held deposit and is stored before the deposit leaves.
 
 use super::deposit_site::active_site;
+use super::pending::HeldDeposit;
 use super::shield_view::{refused, shown};
 use super::ticket::{approve_calldata, sentence};
 use super::{Pending, Wallet};
-use crate::error::{NetError, WalletError};
+use crate::error::WalletError;
 use crate::evm::shield::{review_shield, ShieldChecked, ShieldOrder};
 use crate::evm::{self, Network};
 use crate::ffi::amount_read::parse_base_units;
@@ -40,12 +41,11 @@ impl Wallet {
         if let Err(refusal) = check_deposit(&state, amount) {
             return Ok(refused(amount, sentence(refusal)));
         }
-        // The review replaces any single one held, so only a held split keeps its indices.
-        let held = self.held_by_split()?;
         let site = active_site()?;
+        let draw = self.with_mut(|s| s.draw_deposits(&site, 1, Instant::now()))?;
         let [(index, blinding)] =
-            <[_; 1]>::try_from(self.with(|s| s.draw_deposits(&site, 1, &held))??)
-                .map_err(|_| WalletError::Amount)?;
+            <[_; 1]>::try_from(draw.drawn).map_err(|_| WalletError::Amount)?;
+        let (stamp, draw) = (draw.stamp, draw.id);
         let request =
             prepare_deposit_at(&to, blinding, amount, asset.id, state.fee_bps, state.scale)?;
         let token = asset.token.map(parse_evm_address).transpose()?;
@@ -63,7 +63,12 @@ impl Wallet {
             ShieldChecked::Refused(why) => return Ok(refused(amount, why)),
         };
         let id = self.next_review_id();
-        let note = (!review.approval).then(|| (index, request.note.clone()));
+        let note = (!review.approval).then(|| HeldDeposit {
+            index,
+            note: request.note.clone(),
+            stamp,
+            draw,
+        });
         let shielded = u128::from(request.note.value).saturating_mul(asset.scale);
         let view = shown(id, &review, [amount, request.fee, shielded]);
         let pending = Pending {
@@ -74,7 +79,7 @@ impl Wallet {
             made: Instant::now(),
             note,
         };
-        *self.pending.lock().map_err(|_| NetError::Transport)? = Some(pending);
+        self.hold(pending)?;
         Ok(view)
     }
 }

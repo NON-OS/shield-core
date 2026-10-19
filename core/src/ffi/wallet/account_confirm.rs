@@ -28,11 +28,13 @@ impl Wallet {
             return Err(WalletError::ReviewExpired);
         }
         let key = key.ok_or(WalletError::Custody { source: crate::error::CustodyError::Locked })?;
+        // Tor first, so a confirm that cannot reach the network writes no index.
+        let tor = self.tor()?;
         // A deposit's note is kept before the deposit leaves: a lost blinding is money lost.
-        if let Some((index, note)) = pending.note.clone() {
-            self.with_mut(|s| Ok(s.keep_deposit(index, note)?))?;
+        if let Some(held) = &pending.note {
+            self.with_mut(|s| s.keep_deposit(held.index, held.note.clone(), held.stamp))?;
         }
-        let hash = evm::broadcast(self.tor()?.as_ref(), pending.network, &pending.tx, &key)?;
+        let hash = evm::broadcast(tor.as_ref(), pending.network, &pending.tx, &key)?;
         // Sent either way. A failed write only means the next review cannot ask about it.
         let dir = &self.paths().account;
         let _ = evm::nonce::record(dir, pending.network, &from, pending.tx.nonce, &hash);

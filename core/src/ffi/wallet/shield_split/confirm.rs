@@ -35,7 +35,7 @@ impl Wallet {
         let mut sent = Vec::with_capacity(batch.steps.len());
         for (tx, index, note) in batch.steps {
             // A lost blinding is money lost, so the note is kept before its deposit leaves.
-            self.with_mut(|s| Ok(s.keep_deposit(index, note)?))?;
+            self.with_mut(|s| s.keep_deposit(index, note, batch.stamp))?;
             let hash = match evm::broadcast(&tor, Network::Sepolia, &tx, &key) {
                 Ok(hash) => hash,
                 Err(e) => return Ok(ShieldSplitSent { sent, stopped: Some(e.to_string()) }),

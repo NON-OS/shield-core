@@ -4,7 +4,7 @@
 mod accounts;
 pub(crate) mod book;
 mod candidates;
-mod deposit_draw;
+pub(crate) mod deposit_draw;
 mod install;
 pub(super) mod open;
 mod pool;
@@ -27,6 +27,8 @@ pub struct Session {
     /// Accounts a restore derived and a search has not yet looked at. Empty after an unlock.
     pub(super) candidates: Vec<Slot>,
     pub(crate) leaves_seen: u64,
+    /// Deposit draws made, so each draw's reservation has its own id.
+    pub(super) draws: u64,
     /// From a private key: one account, no words.
     pub(crate) imported: bool,
     /// The public address of the next account, unused, for a withdrawal. None for a key wallet.

@@ -5,7 +5,7 @@
 use super::super::ticket::approve_calldata;
 use super::super::{Pending, Wallet};
 use super::view::{plan, refused, ShieldSplit};
-use crate::error::{NetError, WalletError};
+use crate::error::WalletError;
 use crate::evm::shield::{review_shield, ShieldChecked, ShieldOrder};
 use crate::evm::{self, Network};
 use crate::ffi::evm::parse_evm_address;
@@ -51,7 +51,7 @@ impl Wallet {
             made: Instant::now(),
             note: None,
         };
-        *self.pending.lock().map_err(|_| NetError::Transport)? = Some(held);
+        self.hold(held)?;
         Ok(view)
     }
 }

@@ -13,6 +13,7 @@ use crate::ffi::evm::parse_evm_address;
 use crate::net::asset::Coin;
 use crate::net::pool::{ACTIVE, RPCS};
 use crate::wallet::{check_deposit, prepare_deposit_at, read_pool_state_checked, read_recoverable};
+use std::time::Instant;
 
 #[uniffi::export]
 impl Wallet {
@@ -45,15 +46,17 @@ impl Wallet {
         if let Err(refusal) = check_deposit(&state, amount) {
             return Ok(refused(amount, super::ticket::sentence(refusal)));
         }
-        let mut held = self.held_by_single()?;
-        held.extend(self.held_by_split()?);
         let site = active_site()?;
-        let [(index, blinding)] =
-            <[_; 1]>::try_from(self.with(|s| s.draw_deposits(&site, 1, &held))??)
-                .map_err(|_| WalletError::Amount)?;
-        let request =
-            prepare_deposit_at(&to, blinding, amount, asset.id, state.fee_bps, state.scale)?;
-        self.with_mut(|s| Ok(s.keep_deposit(index, request.note.clone())?))?;
+        // Drawn and kept under one lock, so no review in between can draw the same index.
+        let request = self.with_mut(|s| {
+            let draw = s.draw_deposits(&site, 1, Instant::now())?;
+            let [(index, blinding)] =
+                <[_; 1]>::try_from(draw.drawn).map_err(|_| WalletError::Amount)?;
+            let (fee, scale) = (state.fee_bps, state.scale);
+            let request = prepare_deposit_at(&to, blinding, amount, asset.id, fee, scale)?;
+            s.keep_deposit(index, request.note.clone(), draw.stamp)?;
+            Ok(request)
+        })?;
         ticket(&request, &asset)
     }
 

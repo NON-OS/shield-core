@@ -29,6 +29,14 @@ impl Session {
         self.active
     }
 
+    pub(super) fn slot_mut(&mut self) -> &mut Slot {
+        let active = self.active;
+        match active.checked_sub(1).and_then(|i| usize::try_from(i).ok()) {
+            Some(i) if i < self.more.len() => self.more.get_mut(i).unwrap_or(&mut self.first),
+            _ => &mut self.first,
+        }
+    }
+
     fn at_mut(&mut self, index: u32) -> Option<&mut Slot> {
         match index.checked_sub(1) {
             None => Some(&mut self.first),

@@ -4,7 +4,7 @@
 
 use super::shield_view::{refused, shown};
 use super::{Pending, Wallet};
-use crate::error::{NetError, WalletError};
+use crate::error::WalletError;
 use crate::evm::shield::{review_shield, ShieldChecked, ShieldOrder};
 use crate::evm::{self, Network};
 use crate::ffi::evm::parse_evm_address;
@@ -49,7 +49,7 @@ impl Wallet {
             made: Instant::now(),
             note: None,
         };
-        *self.pending.lock().map_err(|_| NetError::Transport)? = Some(pending);
+        self.hold(pending)?;
         Ok(view)
     }
 }

@@ -5,7 +5,7 @@
 use super::account::parse_recipient;
 use super::account_view::{refusal, view};
 use super::{Pending, Wallet};
-use crate::error::{NetError, WalletError};
+use crate::error::WalletError;
 use crate::evm::{self, Checked, Network, Order};
 use crate::ffi::account_types::PublicReview;
 use crate::ffi::amount_read::parse_units;
@@ -34,7 +34,7 @@ impl Wallet {
         let shown = view(id, network, &from, &order, &review);
         let pending =
             Pending { id, network, from, tx: review.tx, made: Instant::now(), note: None };
-        *self.pending.lock().map_err(|_| NetError::Transport)? = Some(pending);
+        self.hold(pending)?;
         Ok(shown)
     }
 }
