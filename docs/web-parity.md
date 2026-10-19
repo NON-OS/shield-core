@@ -44,16 +44,18 @@ says so. [web.md](web.md) has the reasons.
 
 | The apps | The web |
 |---|---|
+| Every request over Tor, through the embedded Arti client | Every request over the Nym mixnet, through mix-fetch, on by default. If Nym cannot be reached the page asks before connecting directly, for that request or until the page is closed |
 | Recovery words and keys | The same, after the passkey |
 | Lock now, lock when idle, lock on leaving the app | The same; leaving is the page being hidden, and a running proof is left to finish |
 | Screen recording hidden or allowed | Not available in a browser |
 | Accounts, adding one, view-only accounts | The same |
 | Measure: time a proof, export it, share the card | The same; the card has the lines a browser can fill in |
-| Licences, from what the build linked | The same, from the web build's own crates and fonts |
+| Licences, from what the build linked | The same, from the web build's own crates and fonts, and the Nym client's packages and crates |
 | About and the Etna credit | The same |
 | Destroy this wallet | The same |
 | The pool read every five minutes in the background | Every five minutes while the page is open; a closed page reads nothing |
 | Not in the apps | Add to the home screen, check this release, the update prompt, offline opening |
+| Not in the apps | The route in Settings, Nym or direct, with the gateway in use and a switch that turns Nym off until the page is closed |
 | Not in the apps | A line on Home and the shield while a deposit's note is unspent, with "Make it recoverable", a private send to the wallet's own address |
 
 Neither app has a history of transactions, transaction details or endpoint settings, and neither
