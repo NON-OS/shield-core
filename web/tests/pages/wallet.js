@@ -1,14 +1,19 @@
 // Drives the wallet worker the way the screens do, for the smoke test. The passkey's secret is
-// stood in for by fixed test bytes, since this checks the core and its storage, not WebAuthn.
+// stood in for by fixed test bytes, since this checks the core and its storage, not WebAuthn, and
+// every request goes direct, since this checks neither the mixnet nor its route.
 
 import { Wallet } from "../js/wallet/client.js";
+import { slot } from "../js/route/slot.js";
 
 const secret = () => new Uint8Array(32).fill(7);
 const wrong = () => new Uint8Array(32).fill(9);
+const direct = (port) => {
+  port.onmessage = ({ data }) => slot.answer(data.buffer, { kind: slot.DIRECT });
+};
 
 async function wallet() {
   const cache = new Uint8Array(await (await fetch("../periodic.top")).arrayBuffer());
-  const w = new Wallet(new URL("../js/wallet/worker.js", import.meta.url));
+  const w = new Wallet(new URL("../js/wallet/worker.js", import.meta.url), direct);
   const stored = await w.start({ threads: navigator.hardwareConcurrency, cache });
   return { w, stored };
 }

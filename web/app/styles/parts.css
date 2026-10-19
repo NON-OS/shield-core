@@ -649,3 +649,24 @@
   font-size: 18px;
   cursor: pointer;
 }
+
+/* The question asked when the mixnet fails a request: over everything, since the wallet waits on
+   the answer, in the column the screens use. */
+.consent {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: var(--ink);
+  overflow-y: auto;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+.consent-body {
+  max-width: var(--column);
+  margin: 0 auto;
+  display: grid;
+  gap: var(--gap);
+  padding: var(--room) var(--side);
+  border-top: 1px solid var(--cyan);
+}
