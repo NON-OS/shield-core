@@ -31,7 +31,10 @@ export function warning() {
       "This page is only as honest as the files it is served. They come from shield.nonos.app through Cloudflare, which sees the IP address of everyone who loads them. A changed file could read this wallet. Every release publishes the hash of each file, and Settings shows how to check what was served.",
     ),
     lead(
-      "A browser cannot use Tor. Every request goes from your IP address to the public endpoint that answers it, which learns that address and what was asked. For IP privacy, open this page in Tor Browser.",
+      "A browser cannot use Tor, so the wallet's requests go through the Nym mixnet. The RPC providers and transaction relays that answer its reads and sends see a Nym exit, not your IP address. The Nym gateway they enter by sees your IP address, not what was asked or of whom. Each request takes a few seconds longer. If Nym cannot be reached, the page asks before it connects directly, and you can turn Nym off in Settings until the page is closed.",
+    ),
+    lead(
+      "Nym does not hide everything. Cloudflare still sees your IP address when it serves this page, and what happens on chain is public, as always.",
     ),
     lead(
       "The key is sealed under a passkey, where the apps use the Secure Enclave or the Keystore. No key, note or seed is sent to any server.",
