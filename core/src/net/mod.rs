@@ -20,6 +20,10 @@ mod pools;
 pub mod relay;
 pub mod rpc;
 pub(crate) mod socks5;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod tor;
+#[cfg(target_arch = "wasm32")]
+#[path = "tor_absent/mod.rs"]
 pub mod tor;
 
 pub use endpoint::{default_proxy_port, Endpoint, Route};
