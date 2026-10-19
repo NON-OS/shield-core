@@ -29,10 +29,11 @@ const types = {
 
 const root = resolve(process.argv[2] ?? ".");
 const port = Number(process.argv[3] ?? 8787);
-// The endpoints a release lists. A site without a manifest, such as the bench, reaches none.
+// The endpoints and mixnet hosts a release lists. A site without a manifest, such as the bench,
+// reaches none.
 const listed = join(root, "release-manifest.json");
-const connect = existsSync(listed) ? JSON.parse(readFileSync(listed, "utf8")).connect : [];
-const sent = headers(connect);
+const manifest = existsSync(listed) ? JSON.parse(readFileSync(listed, "utf8")) : {};
+const sent = headers(manifest.connect ?? [], manifest.mixnet ?? []);
 // A built release carries Cloudflare's `_headers`, and then this server applies it as Pages would.
 const rulesFile = join(root, "_headers");
 const rules = existsSync(rulesFile) ? pagesRules(readFileSync(rulesFile, "utf8")) : null;

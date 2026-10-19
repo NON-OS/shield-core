@@ -40,7 +40,7 @@ for (const file of manifest.files) {
 }
 
 const { res: root } = await get("./");
-for (const [name, value] of Object.entries(expected(manifest.connect))) {
+for (const [name, value] of Object.entries(expected(manifest.connect, manifest.mixnet))) {
   if (root.headers.get(name) !== value)
     problems.push(`header ${name}: ${root.headers.get(name) ?? "missing"}`);
 }
