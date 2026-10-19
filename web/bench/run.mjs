@@ -13,12 +13,19 @@ import { chromium } from "playwright";
 
 const [site, threads, cache, proofOut] = process.argv.slice(2);
 const port = 8790 + Number(threads);
-const files = spawn(process.execPath, [new URL("../scripts/serve.mjs", import.meta.url).pathname, site, String(port)], {
-  stdio: "ignore",
-});
+const files = spawn(
+  process.execPath,
+  [new URL("../scripts/serve.mjs", import.meta.url).pathname, site, String(port)],
+  {
+    stdio: "ignore",
+  },
+);
 await new Promise((r) => setTimeout(r, 500));
 
-const server = await chromium.launchServer({ executablePath: "/opt/pw-browsers/chromium", headless: true });
+const server = await chromium.launchServer({
+  executablePath: "/opt/pw-browsers/chromium",
+  headless: true,
+});
 const root = server.process().pid;
 const browser = await chromium.connect(server.wsEndpoint());
 
@@ -29,7 +36,10 @@ const children = (pid) => {
     try {
       const ppid = Number(readFileSync(`/proc/${d}/stat`, "utf8").split(") ")[1].split(" ")[1]);
       if (ppid === pid) out.push(Number(d), ...children(Number(d)));
-    } catch {}
+    } catch {
+      // The process ended between the listing and the read, so it has no children to count.
+      continue;
+    }
   }
   return out;
 };
@@ -66,7 +76,10 @@ const page = await browser.newPage();
 page.on("console", (m) => console.error(`console: ${m.text()}`));
 const wall = Date.now();
 await page.goto(`http://127.0.0.1:${port}/index.html?threads=${threads}&cache=${cache}`);
-await page.waitForFunction(() => window.benchResult, null, { timeout: 30 * 60 * 1000, polling: 1000 });
+await page.waitForFunction(() => window.benchResult, null, {
+  timeout: 30 * 60 * 1000,
+  polling: 1000,
+});
 const result = await page.evaluate(() => window.benchResult);
 clearInterval(sampler);
 await browser.close();
