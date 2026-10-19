@@ -65,9 +65,13 @@ pub fn review(
         Ok(arrival) => arrival,
         Err(why) => return Ok(Checked::Refused(why)),
     };
+    if let Some(why) = review_checks::ether_short(order, ether) {
+        return Ok(Checked::Refused(why));
+    }
     let plain = order.coin == Coin::Eth && !contract;
-    let Some(gas) = review_checks::gas_limit(at(5)?, plain) else {
-        return Ok(Checked::Refused(review_checks::no_estimate(plain)));
+    let gas = match review_checks::gas_limit(at(5)?, plain) {
+        Ok(gas) => gas,
+        Err(why) => return Ok(Checked::Refused(why)),
     };
     let max_network_fee = u128::from(gas).checked_mul(fees.max_fee).ok_or(NetError::ReplyShape)?;
     if let Some(why) = review_checks::afford(order, ether, max_network_fee) {
