@@ -66,22 +66,133 @@ stays until that note is spent.
 
 ## The network
 
-A browser cannot run Tor, and the page says so before the first request. Each request the core
-writes is sent by the browser itself, with a synchronous request from the wallet's worker, from the
-user's own IP address to the endpoint the core named (`core/src/net/tor_web`). That endpoint learns
-the address and what was asked. The endpoints are the core's own public defaults, and the page's
-Content Security Policy allows connections to those hosts and to no other, so a changed setting or
-a changed file cannot quietly send requests elsewhere. No request goes to a NØNOS server. Endpoints
-the user chooses come in a later release, with a policy that lists them.
+A browser cannot run Tor. The web build sends the core's requests through the Nym mixnet instead,
+by default, every time the page opens. Every chain read and every send the core makes goes this
+way. There is no relayer to reach on the web: a spend is settled from the user's own account, so
+its settlement is one more send. No request goes to a NØNOS server.
 
-Of the nine hosts, the two thirdweb ones answer an unauthenticated request with a rate-limit notice
-and no CORS header, so a browser drops their reply; natively the same notice is a reply the core
-cannot read. Neither is first in any list, and the core moves to the next host when one fails, so a
-read or a send goes through another endpoint.
+### What Nym hides and what it does not
 
-The host of the page and Cloudflare, which serves it, see the IP address of everyone who loads the
-page, and when. For IP privacy the answer is Tor Browser. Its higher security levels can turn off
-JavaScript or WebAssembly, which the wallet cannot run without.
+The RPC providers and the private transaction relays see a Nym exit node's address, not the
+user's. TLS runs from the page to the endpoint inside the mixnet, so the exit sees ciphertext and
+the endpoint's address. The entry gateway sees the user's IP address and that it uses Nym, but not
+what is asked or of whom. Between the gateway and the exit, the mixnet's nodes reorder and delay
+packets, and the client sends cover traffic while the tunnel is up.
+
+What it does not hide: Cloudflare and the host of the page see the IP address of everyone who loads
+the page, and when, since the page itself comes over the plain web. What happens on chain is public,
+as always. An endpoint still learns the `0x` address a read names and the time of the request, as in
+[02-threat-model.md](02-threat-model.md) section 3, without the IP address. The exit and the
+endpoint can see that requests come from Nym, and an endpoint may refuse or limit them.
+
+One tunnel carries every request of a session, through one exit. The apps keep a circuit per
+account and per network, so no exit or endpoint sees two accounts' reads come the same way. On the
+web, an endpoint that sees two addresses read from the same exit in one session can guess they
+belong together. A new tunnel, and so a new exit, comes with each new page and after each failure.
+
+Each request takes a few seconds longer: the mixnet delays every packet on purpose, and one request
+over it is several round trips, for TCP, TLS and HTTP. The first waits for the tunnel to start. How
+much longer is not measured yet; [web-measurements.md](web-measurements.md) says why and how.
+
+### How a request travels
+
+The core is unchanged (`core/src/net/tor_web`). It writes an HTTP/1.1 request and sends it with
+the browser's synchronous `XMLHttpRequest` from the wallet's worker. In that worker the name is a
+stand-in (`web/app/js/wallet/sync-request.js`): it posts the request to the page on a port of its
+own and blocks on `Atomics.wait` over a `SharedArrayBuffer`, which the page can hand over because it
+is cross-origin isolated. The page (`web/app/js/route/bridge.js`) sends it through mix-fetch in a
+worker of its own (`web/app/js/route/worker.js`), writes the status and body into the shared buffer
+and wakes the wallet's worker, whose core reads the reply as it would any other. The core's own
+limits apply: a reply above 16 MiB is refused.
+
+The tunnel starts with the first request. Each tunnel is a fresh Nym client under a random name,
+registered with one gateway from a pinned set of eight, starting at a random one, and it picks an
+exit from Nym's directory. Its keys live in IndexedDB as `wasm-client-storage-shield-…` and are
+deleted when the tunnel ends, so two sessions share no Nym identity.
+
+### Never direct without asking
+
+When a request fails through Nym, the page ends the tunnel and tries again through a new one and
+the next gateway, three times within 150 seconds. Then it stops and asks: "Nym isn't reachable.
+Connect directly? Your IP address becomes visible to the network provider." "Stay on Nym" is the
+first answer and the one in focus; it fails that request and the rest of that wallet call.
+"Connect directly" sends that one request from the browser. "Directly until I close the page" turns
+Nym off for the rest of the session. No answer is stored, and nothing goes direct without one.
+
+Settings shows the route, the gateway in use and whether the tunnel is up, with a switch that turns
+Nym off. The switch holds until the page is closed, like the prompt's answer, so the next visit is
+on Nym again. The status line at the foot of every screen says "nym mixnet" or "browser, direct".
+
+### The Content Security Policy
+
+The policy names every host the page may connect to: its own origin, Nym's directory
+(`validator.nymtech.net`, and Nym's two fallbacks `nym-frontdoor.global.ssl.fastly.net` and
+`cdn1.media-platform.net`), the pinned gateways as `wss://<host>:9001`, and the core's RPC
+endpoints. The gateways come from `web/app/js/route/hosts.js`; each is a different operator in a
+different country, and `web/scripts/check-gateways.mjs` says which are still listed as usable.
+
+A pinned set is tighter than `wss:` or `wss://*:9001` for any gateway, which a changed file could
+use to send data anywhere. What it costs: the operators of eight gateways see the IP addresses of
+every Shield Web user who reaches them, where an unpinned client would spread over about 550. Each
+gateway sees only its own share, and never the requests. A pinned gateway that leaves the network
+costs a retry, and a release with fewer than half its gateways usable should pin again.
+
+The RPC hosts stay in the policy, because the direct fallback is the browser's own request and the
+policy cannot tell a request the user allowed from one they did not. What keeps a request off them
+while Nym is on is the code above. `web/tests/route.mjs` checks it in Chromium's net log: with Nym
+blocked, no RPC host is named before the user answers "Connect directly".
+
+The core's two thirdweb hosts answer an unauthenticated request with a rate-limit notice. Through
+Nym that is a reply the core cannot read, as it is natively, and directly the browser drops it for
+want of a CORS header. Neither is first in any list, and the core moves to the next host.
+
+For IP privacy from Cloudflare too, the answer is Tor Browser. Its higher security levels can turn
+off JavaScript or WebAssembly, which the wallet cannot run without.
+
+### The mixnet client
+
+`@nymproject/mix-fetch` 3.0.0, the newest release (published 8 October 2026), and the
+`@nymproject/mix-tunnel` 0.3.0 it pins, both Apache-2.0, pinned in `web/package.json` and its lock
+file. mix-fetch is a 2 KB wrapper. mix-tunnel ships the Nym client's worker as base64 inside one
+18 MB module, with smolmix-wasm, Nym's Rust client, as base64 inside the worker. The wasm says it
+was built from `nymtech/nym` at `564b2ede` on 7 October 2026.
+
+The browser would start that worker from a `blob:` URL, which `worker-src 'self'` refuses. So
+`web/scripts/nym.mjs` writes the worker out as `nym/tunnel.js` (13.6 MB, 4.1 MB gzipped, of which
+10.1 MB is wasm), replaces the one line that made the blob with one that starts that file, points
+mix-fetch's import at the file beside it, and checks all three against pinned SHA-256s. The files
+are served from the page's own origin, listed in the release manifest and checked by the service
+worker like every other file. The wasm compiles under `'wasm-unsafe-eval'`, which the page already
+allows for its own.
+
+What the client does, from its source at that commit (`wasm/smolmix`, `common/network-defaults`)
+and from Chromium's net log:
+
+- TLS ends inside the client's wasm: rustls with the RustCrypto provider and the `webpki-roots`
+  store, AEAD suites with forward secrecy only (`wasm/smolmix/src/tls.rs`). The exit forwards IP
+  packets and sees ciphertext, the destination's address and port, and the name in the TLS
+  handshake.
+- Host names are resolved through the tunnel by DNS over HTTPS to Quad9, Cloudflare or Google, so
+  the resolver learns the name from an exit's address.
+- It reaches Nym's directory over HTTPS for the gateways, the exits and their versions, and holds
+  one WebSocket to its entry gateway. Nothing else leaves the browser.
+- Its exits, IP packet routers, enforce Nym's exit policy
+  (`https://nymtech.net/.wellknown/network-requester/exit-policy.txt`, v1.12.0 of 5 August 2026):
+  port 443 is open to any address but about 430 ranges listed by Spamhaus.
+- It speaks HTTP/1.1 only, with browser-shaped default headers, and has WebSockets too, which the
+  wallet does not use.
+- It starts in a worker under COOP, COEP `require-corp` and this CSP, compiles its wasm, reads the
+  directory and opens its gateway's WebSocket, as `web/tests/nym.mjs` shows. A whole request
+  through it has not been made yet; [web-measurements.md](web-measurements.md) says why.
+
+Left to choose a gateway at random, 3.0.0 picked one without a host name for wss and failed
+("does not support the wss protocol"). The pinned set avoids that.
+
+The licences screen lists the two packages, the JavaScript mix-tunnel bundles (Comlink and two
+Rollup helpers) and the 533 crates smolmix-wasm links, made by `web/scripts/nym-licences.mjs` from a
+Nym checkout at that commit and kept in `web/nym`. They are MIT, Apache-2.0, BSD, ISC, Zlib,
+Unicode, CC0 and CDLA-Permissive-2.0, with two MPL-2.0 crates, `colored` and `option-ext`. None is
+GPL.
 
 The hand-off to a lander is the one step the web build cannot take as the apps do. The landers are
 onion services, and a normal browser cannot reach an onion; the transport refuses one rather than
@@ -121,9 +232,12 @@ manifest, and checks the headers the page depends on. Settings in the page shows
 manifest hash.
 
 The page loads nothing from anywhere but its own origin. The Content Security Policy allows script,
-style, fonts and workers from the site itself, lets the page compile its own wasm and nothing else,
-and allows connections to the core's endpoints only. There are no third-party scripts, no analytics
-and no CDN at runtime. Text from a server or a field is always set as text, never parsed as markup.
+style, fonts and workers from the site itself, lets the page compile its own wasm and the Nym
+client's and nothing else, and allows connections to Nym's directory, the pinned gateways and the
+core's endpoints only, as in [The network](#the-network). The one third-party code the page runs,
+the Nym client, is served from the site, listed in the manifest and checked like every other file.
+There are no analytics and no CDN at runtime. Text from a server or a field is always set as text,
+never parsed as markup.
 
 ## Installing and updating
 
@@ -169,10 +283,10 @@ Cloudflare Pages' `_headers` and the development server applies the same way.
 
 | Header | Why |
 |---|---|
-| `Cross-Origin-Opener-Policy: same-origin` | with the next line, makes the page cross-origin isolated, the only way a browser hands it shared memory and so the threaded prover |
+| `Cross-Origin-Opener-Policy: same-origin` | with the next line, makes the page cross-origin isolated, the only way a browser hands it shared memory, for the threaded prover and for the wallet's worker to wait on its requests |
 | `Cross-Origin-Embedder-Policy: require-corp` | as above |
 | `Cross-Origin-Resource-Policy: same-origin` | no other site can embed these files |
-| `Content-Security-Policy` | as in [Code integrity](#code-integrity), with the endpoint hosts the release manifest lists |
+| `Content-Security-Policy` | as in [Code integrity](#code-integrity), with the endpoint hosts and the Nym hosts the release manifest lists |
 | `Referrer-Policy: no-referrer` | a request to an endpoint does not name the page |
 | `X-Content-Type-Options: nosniff` | a file runs only as the type it is served as |
 | `Permissions-Policy` | passkeys and writing to the clipboard, and every other feature off |
