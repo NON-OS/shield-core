@@ -3,6 +3,7 @@
 //! would refuse or keep the money gets a refusal. Otherwise the note is stored before
 //! any transaction leaves, since a deposit whose blinding is lost cannot be spent.
 
+use super::deposit_site::active_site;
 use super::ticket::{refused, ticket};
 use super::Wallet;
 use crate::error::WalletError;
@@ -11,8 +12,7 @@ use crate::ffi::chain_types::{format_wide, DepositTicket, Recoverable};
 use crate::ffi::evm::parse_evm_address;
 use crate::net::asset::Coin;
 use crate::net::pool::{ACTIVE, RPCS};
-use crate::store::Row;
-use crate::wallet::{check_deposit, prepare_deposit, read_pool_state_checked, read_recoverable};
+use crate::wallet::{check_deposit, prepare_deposit_at, read_pool_state_checked, read_recoverable};
 
 #[uniffi::export]
 impl Wallet {
@@ -45,8 +45,15 @@ impl Wallet {
         if let Err(refusal) = check_deposit(&state, amount) {
             return Ok(refused(amount, super::ticket::sentence(refusal)));
         }
-        let request = prepare_deposit(&to, amount, asset.id, state.fee_bps, state.scale)?;
-        self.with_mut(|s| Ok(s.record(Row::Deposit(request.note.clone()))?))?;
+        let mut held = self.held_by_single()?;
+        held.extend(self.held_by_split()?);
+        let site = active_site()?;
+        let [(index, blinding)] =
+            <[_; 1]>::try_from(self.with(|s| s.draw_deposits(&site, 1, &held))??)
+                .map_err(|_| WalletError::Amount)?;
+        let request =
+            prepare_deposit_at(&to, blinding, amount, asset.id, state.fee_bps, state.scale)?;
+        self.with_mut(|s| Ok(s.keep_deposit(index, request.note.clone())?))?;
         ticket(&request, &asset)
     }
 

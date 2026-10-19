@@ -4,6 +4,7 @@
 mod accounts;
 pub(crate) mod book;
 mod candidates;
+mod deposit_draw;
 mod install;
 pub(super) mod open;
 mod pool;

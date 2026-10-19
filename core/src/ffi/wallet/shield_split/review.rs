@@ -2,6 +2,7 @@
 //! The pool is read and checked as for one deposit, each deposit gets its own note, and the notes
 //! travel with the held review, each stored before its deposit leaves.
 
+use super::super::deposit_site::active_site;
 use super::super::{PendingBatch, Wallet};
 use super::view::{plan, refused, ShieldSplit};
 use crate::error::{NetError, WalletError};
@@ -12,7 +13,7 @@ use crate::ffi::evm::parse_evm_address;
 use crate::net::asset::Coin;
 use crate::net::pool::{ACTIVE, RPCS};
 use crate::wallet::deposit_split::pieces;
-use crate::wallet::{check_deposit, prepare_deposit, read_pool_state_checked, DepositRequest};
+use crate::wallet::{check_deposit, prepare_deposit_at, read_pool_state_checked, DepositRequest};
 use std::time::Instant;
 
 #[uniffi::export]
@@ -36,13 +37,18 @@ impl Wallet {
                 "This pool takes these deposits one by one. Deposit each size alone.",
             ));
         }
+        // The review replaces any split held, so only a held single deposit keeps its index.
+        let held = self.held_by_single()?;
+        let site = active_site()?;
+        let drawn = self.with(|s| s.draw_deposits(&site, sizes.len(), &held))??;
         let mut requests: Vec<DepositRequest> = Vec::with_capacity(sizes.len());
-        for size in sizes {
+        for (size, (_, blinding)) in sizes.into_iter().zip(&drawn) {
             let base = u128::from(size).checked_mul(asset.scale).ok_or(WalletError::Amount)?;
             if let Err(refusal) = check_deposit(&state, base) {
                 return Ok(refused(super::super::ticket::sentence(refusal)));
             }
-            requests.push(prepare_deposit(&to, base, asset.id, state.fee_bps, state.scale)?);
+            let (fee, scale) = (state.fee_bps, state.scale);
+            requests.push(prepare_deposit_at(&to, *blinding, base, asset.id, fee, scale)?);
         }
         let deposits: Vec<Deposit> =
             requests.iter().map(|r| Deposit { value: r.value_wei, data: &r.calldata }).collect();
@@ -56,7 +62,8 @@ impl Wallet {
         };
         let id = self.next_review_id();
         let view = plan(id, &requests, asset.scale, batch.max_network_fee);
-        let steps = batch.txs.into_iter().zip(requests.into_iter().map(|r| r.note)).collect();
+        let notes = drawn.into_iter().zip(requests).map(|((index, _), r)| (index, r.note));
+        let steps = batch.txs.into_iter().zip(notes).map(|(tx, (i, note))| (tx, i, note)).collect();
         let held = PendingBatch { id, from, steps, made: Instant::now() };
         *self.batch.lock().map_err(|_| NetError::Transport)? = Some(held);
         Ok(view)

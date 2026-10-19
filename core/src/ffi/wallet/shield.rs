@@ -2,6 +2,7 @@
 //! approval or the deposit reviewed and held under an id, confirmed through the same call as a
 //! send. The note travels with the held deposit and is stored before the deposit leaves.
 
+use super::deposit_site::active_site;
 use super::shield_view::{refused, shown};
 use super::ticket::{approve_calldata, sentence};
 use super::{Pending, Wallet};
@@ -13,7 +14,7 @@ use crate::ffi::evm::parse_evm_address;
 use crate::ffi::PublicShield;
 use crate::net::asset::Coin;
 use crate::net::pool::{ACTIVE, RPCS};
-use crate::wallet::{check_deposit, prepare_deposit, read_pool_state_checked};
+use crate::wallet::{check_deposit, prepare_deposit_at, read_pool_state_checked};
 use std::time::Instant;
 
 #[uniffi::export]
@@ -39,7 +40,14 @@ impl Wallet {
         if let Err(refusal) = check_deposit(&state, amount) {
             return Ok(refused(amount, sentence(refusal)));
         }
-        let request = prepare_deposit(&to, amount, asset.id, state.fee_bps, state.scale)?;
+        // The review replaces any single one held, so only a held split keeps its indices.
+        let held = self.held_by_split()?;
+        let site = active_site()?;
+        let [(index, blinding)] =
+            <[_; 1]>::try_from(self.with(|s| s.draw_deposits(&site, 1, &held))??)
+                .map_err(|_| WalletError::Amount)?;
+        let request =
+            prepare_deposit_at(&to, blinding, amount, asset.id, state.fee_bps, state.scale)?;
         let token = asset.token.map(parse_evm_address).transpose()?;
         let order = ShieldOrder {
             pool: parse_evm_address(ACTIVE.address)?,
@@ -55,7 +63,7 @@ impl Wallet {
             ShieldChecked::Refused(why) => return Ok(refused(amount, why)),
         };
         let id = self.next_review_id();
-        let note = (!review.approval).then(|| request.note.clone());
+        let note = (!review.approval).then(|| (index, request.note.clone()));
         let shielded = u128::from(request.note.value).saturating_mul(asset.scale);
         let view = shown(id, &review, [amount, request.fee, shielded]);
         let pending = Pending {

@@ -7,7 +7,6 @@ use crate::error::{CustodyError, NetError, WalletError};
 use crate::evm::{self, Network};
 use crate::ffi::account_types::PublicSent;
 use crate::ffi::evm::to_hex;
-use crate::store::Row;
 
 /// The deposits sent in order, and why the rest were not, when one failed.
 #[derive(Clone, PartialEq, Eq, Debug, uniffi::Record)]
@@ -34,9 +33,9 @@ impl Wallet {
         let key = key.ok_or(WalletError::Custody { source: CustodyError::Locked })?;
         let tor = self.tor()?;
         let mut sent = Vec::with_capacity(batch.steps.len());
-        for (tx, note) in batch.steps {
+        for (tx, index, note) in batch.steps {
             // A lost blinding is money lost, so the note is kept before its deposit leaves.
-            self.with_mut(|s| Ok(s.record(Row::Deposit(note))?))?;
+            self.with_mut(|s| Ok(s.keep_deposit(index, note)?))?;
             let hash = match evm::broadcast(&tor, Network::Sepolia, &tx, &key) {
                 Ok(hash) => hash,
                 Err(e) => return Ok(ShieldSplitSent { sent, stopped: Some(e.to_string()) }),

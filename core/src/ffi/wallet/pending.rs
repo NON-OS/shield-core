@@ -8,6 +8,7 @@ pub(super) struct Pending {
     pub(super) from: [u8; 20],
     pub(super) tx: crate::evm::tx::Eip1559,
     pub(super) made: std::time::Instant,
-    /// For a deposit, the note it creates, stored before the deposit leaves.
-    pub(super) note: Option<crate::notes::NotePlaintext>,
+    /// For a deposit, the index its blinding was drawn at and the note it creates, both stored
+    /// before the deposit leaves.
+    pub(super) note: Option<(u32, crate::notes::NotePlaintext)>,
 }

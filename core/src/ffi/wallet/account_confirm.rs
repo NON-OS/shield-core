@@ -29,8 +29,8 @@ impl Wallet {
         }
         let key = key.ok_or(WalletError::Custody { source: crate::error::CustodyError::Locked })?;
         // A deposit's note is kept before the deposit leaves: a lost blinding is money lost.
-        if let Some(note) = pending.note.clone() {
-            self.with_mut(|s| Ok(s.record(crate::store::Row::Deposit(note))?))?;
+        if let Some((index, note)) = pending.note.clone() {
+            self.with_mut(|s| Ok(s.keep_deposit(index, note)?))?;
         }
         let hash = evm::broadcast(self.tor()?.as_ref(), pending.network, &pending.tx, &key)?;
         // Sent either way. A failed write only means the next review cannot ask about it.
