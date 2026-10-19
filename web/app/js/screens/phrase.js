@@ -21,7 +21,7 @@ export function phrase() {
     h(
       "p",
       { class: "lead" },
-      "On paper, not in a photo and not in a manager that syncs. These words are the wallet: nothing else can restore it.",
+      "On paper, not in a photo and not in a manager that syncs. They restore the keys, the accounts and every note sent to this wallet. A deposit's note stays on this device until it is sent privately; Home says when one is waiting.",
     ),
     h(
       "ol",
