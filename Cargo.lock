@@ -2516,9 +2516,12 @@ dependencies = [
 name = "nox_shield_web"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.2.17",
+ "nonos_seal",
  "nox_prover",
  "nox_shield_core",
  "wasm-bindgen",
+ "zeroize",
 ]
 
 [[package]]
