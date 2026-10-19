@@ -45,6 +45,11 @@ export class Wallet {
     return this.#send({ op: "key", secret }, [secret.buffer]);
   }
 
+  /** Time one proof of the pinned test vector on this device. */
+  time() {
+    return this.#send({ op: "time" });
+  }
+
   call(method, ...args) {
     return this.#send({ op: "call", method, args });
   }
