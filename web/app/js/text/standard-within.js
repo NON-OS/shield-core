@@ -1,5 +1,5 @@
-// The largest standard size, 1, 2 or 5 followed by zeros, strictly below an amount, so a private
-// send of it leaves room for the fee in the same note. Amounts are decimal text, read exactly.
+// The largest standard size, 1, 2 or 5 followed by zeros, that a note can send with room left for
+// the fee, and no smaller than the pool's smallest size. Amounts are decimal text, read exactly.
 
 const PLACES = 18;
 
@@ -18,11 +18,11 @@ const decimal = (units) => {
   return part ? `${whole}.${part}` : whole;
 };
 
-export function standardBelow(text) {
-  const amount = scaled(text);
+export function standardWithin(value, room, least) {
+  const most = scaled(value) - scaled(room);
   let best = null;
-  for (let unit = 1n; unit < amount; unit *= 10n) {
-    for (const lead of [1n, 2n, 5n]) if (lead * unit < amount) best = lead * unit;
+  for (let unit = 1n; unit <= most; unit *= 10n) {
+    for (const lead of [1n, 2n, 5n]) if (lead * unit <= most) best = lead * unit;
   }
-  return best === null ? null : decimal(best);
+  return best === null || best < scaled(least) ? null : decimal(best);
 }
