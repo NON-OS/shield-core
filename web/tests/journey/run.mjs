@@ -8,6 +8,7 @@
 // <step> is gas or shield. The shield step deposits, waits for the pool's root, which it commits
 // every five minutes, sends to B privately, and withdraws to a fresh address of A.
 
+import { title } from "../title.mjs";
 import { browser, open, serve } from "./harness.mjs";
 
 const [site, wordsA, wordsB, step] = process.argv.slice(2);
@@ -33,11 +34,14 @@ async function publicAddress(w) {
 
 async function readPool(w) {
   await w.ready();
-  if (!(await w.page.getByRole("button", { name: "Read the pool", exact: true }).count())) {
+  if (!title("Shield").test(await w.page.locator("h1").textContent())) {
     await w.click("Shield");
     await w.heading("Shield");
   }
-  await w.click("Read the pool");
+  // A read the page started on its own shows "Reading the pool" until it is done.
+  const row = w.page.getByRole("button", { name: "Read the pool", exact: true });
+  await row.waitFor({ timeout: 30 * 60 * 1000 });
+  await row.click();
   // The row reads "Reading the pool" while the read runs, and its name again once it is done.
   await w.page
     .getByRole("button", { name: "Read the pool", exact: true })
@@ -137,35 +141,57 @@ if (step === "gas") {
 }
 
 // One session from deposit to withdrawal. A deposit's note is kept only where it was made, so
-// both wallets stay open in their own browser context until the journey ends.
+// both wallets stay open in their own browser context until the journey ends, and a step that
+// stops is taken again after a reload, which keeps the context's storage.
 if (step === "shield") {
+  const [deposit, send, withdraw] = (process.env.AMOUNTS ?? "0.02 0.005 0.005").split(" ");
   const w = await open(b, base, wordsB);
-  try {
-    const B = await publicAddress(w);
-    await readPool(a);
-    await a.click("Deposit");
-    await a.heading("Deposit");
-    await a.page.locator("#coin").selectOption("eth");
-    await a.page.locator("input").first().fill("0.02");
-    await a.click("Review");
-    await a.text("the note holds");
-    say(`note holds ${await a.page.locator("dd").nth(3).textContent()}`);
-    await a.click("Confirm and shield");
-    await a.text("Deposit sent. Waiting for a block.");
-    say(`deposit ${await a.page.locator(".value-block .visually-hidden").textContent()}`);
-    await mined(a, "Shielded.");
-    say("shielded, waiting for the pool to commit the root");
-    await a.click("Done");
-    await rooted(a);
-    await spend(a, { withdraw: false, to: B.nox1, amount: "0.005" });
-    await a.click("Done");
-    say(`B reads the pool, ETH shielded ${await readPool(w)}`);
-    await rooted(a);
-    const to = await spend(a, { withdraw: true, amount: "0.005" });
-    say(`withdrawn to a fresh address of A, ${to}`);
-  } catch (e) {
-    say(`stopped: A shows ${await a.seen()}; B shows ${await w.seen()}`);
-    throw e;
+  const B = await publicAddress(w);
+  const done = new Set();
+  const stage = async (name, run) => {
+    if (done.has(name)) return;
+    await run();
+    done.add(name);
+  };
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await stage("deposit", async () => {
+        await readPool(a);
+        await a.click("Deposit");
+        await a.heading("Deposit");
+        await a.page.locator("#coin").selectOption("eth");
+        await a.page.locator("input").first().fill(deposit);
+        await a.click("Review");
+        await a.text("the note holds");
+        say(`note holds ${await a.page.locator("dd").nth(3).textContent()}`);
+        await a.click("Confirm and shield");
+        await a.text("Deposit sent. Waiting for a block.");
+        say(`deposit ${await a.page.locator(".value-block .visually-hidden").textContent()}`);
+        await mined(a, "Shielded.");
+        say("shielded, waiting for the pool to commit the root");
+        await a.click("Done");
+      });
+      await stage("send", async () => {
+        await rooted(a);
+        await spend(a, { withdraw: false, to: B.nox1, amount: send });
+        await a.click("Done");
+      });
+      await stage("read", async () => say(`B reads the pool, ETH shielded ${await readPool(w)}`));
+      await stage("withdraw", async () => {
+        await rooted(a);
+        const to = await spend(a, { withdraw: true, amount: withdraw });
+        say(`withdrawn to a fresh address of A, ${to}`);
+      });
+      break;
+    } catch (e) {
+      say(`stopped: A shows ${await a.seen()}; B shows ${await w.seen()}; ${e.message}`);
+      if (attempt === 5) throw e;
+      for (const x of [a, w]) {
+        await x.page.reload();
+        await x.heading("Locked", 120_000);
+        await x.ready();
+      }
+    }
   }
 }
 
