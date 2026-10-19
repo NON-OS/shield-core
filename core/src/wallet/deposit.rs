@@ -36,9 +36,23 @@ pub fn split_deposit(amount: u64, fee_bps: u16) -> Option<(u64, u64)> {
     (value > 0).then_some((fee, value))
 }
 
-/// Build a deposit of `amount` base units, holding `amount / scale - fee` whole note units.
+/// Build a deposit of `amount` base units, holding `amount / scale - fee` whole note units, under
+/// a random blinding. Such a note is found again only from the store that kept it.
 pub fn prepare_deposit(
     to: &Address,
+    amount: u128,
+    asset_id: u64,
+    fee_bps: u16,
+    scale: u128,
+) -> Result<DepositRequest, WalletError> {
+    prepare_deposit_at(to, fresh_blinding()?, amount, asset_id, fee_bps, scale)
+}
+
+/// The same deposit under `blinding`, which the wallet draws from the seed so a restore from the
+/// words finds the note again.
+pub fn prepare_deposit_at(
+    to: &Address,
+    blinding: [u64; 4],
     amount: u128,
     asset_id: u64,
     fee_bps: u16,
@@ -47,8 +61,7 @@ pub fn prepare_deposit(
     let units = units_of(amount, scale).map_err(|_| WalletError::Amount)?;
     let (fee_units, value) = split_deposit(units, fee_bps).ok_or(WalletError::Amount)?;
     let fee = u128::from(fee_units).checked_mul(scale).ok_or(WalletError::Amount)?;
-    let note =
-        NotePlaintext { value, asset_id, blinding: fresh_blinding()?, spend_pk: to.spend_pk };
+    let note = NotePlaintext { value, asset_id, blinding, spend_pk: to.spend_pk };
     let cm = commitment(&pool_hasher(), &note.note());
     let owner_commit = owner_commit_wire(&note.note());
     let calldata = absorb_calldata(asset_id, amount, &owner_commit);

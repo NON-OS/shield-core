@@ -29,7 +29,10 @@ mod sync_chain;
 pub(crate) mod take_back;
 pub(crate) mod watch;
 
-pub use deposit::{absorb_calldata, prepare_deposit, split_deposit, DepositRequest, NATIVE_ASSET};
+pub use deposit::{
+    absorb_calldata, prepare_deposit, prepare_deposit_at, split_deposit, DepositRequest,
+    NATIVE_ASSET,
+};
 pub use deposit_gate::{check as check_deposit, PoolState, Refusal};
 pub use deposit_read::{read_pool_state, read_pool_state_checked};
 pub use intent_rules::{check_intent, Intent, IntentRefusal, PoolRules, MAX_FEE_BPS};

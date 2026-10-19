@@ -8,6 +8,8 @@ mod accounts_test;
 mod address;
 pub(crate) mod base32;
 pub(crate) mod base32_read;
+pub(crate) mod deposit_key;
+mod deposit_site;
 pub(crate) mod derive;
 mod domain;
 pub(crate) mod material;
@@ -32,6 +34,7 @@ mod viewer;
 
 pub use account::Account;
 pub use address::Address;
+pub use deposit_site::DepositSite;
 pub(crate) use derive::store_key;
 pub use nullifier::{note_nullifier_wire, nullifier_wire_with};
 pub use receive::{ReceiveKey, ENCAPSULATION_KEY_BYTES};

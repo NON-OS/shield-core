@@ -5,6 +5,8 @@
 mod chain;
 mod chain_read;
 mod chain_viewer;
+mod deposit_values;
+mod deposits;
 mod logs;
 mod output;
 mod scan;
@@ -15,6 +17,8 @@ pub(crate) mod words;
 
 pub use chain::{scan_chain, ChainScan};
 pub use chain_viewer::scan_viewer;
+pub use deposit_values::MOST_DEPOSIT_FEE_BPS;
+pub use deposits::{recover_deposits, DEPOSIT_GAP};
 pub use logs::{first_gap, note_commitments, output_leaves, scan_logs, Log};
 pub use output::PoolOutput;
 pub use scan::scan;

@@ -25,7 +25,7 @@ pub fn pieces(units: u128, asset: &Asset) -> Option<Vec<u64>> {
 }
 
 /// Every standard size of `asset` inside its range, largest first.
-fn sizes(asset: &Asset) -> Vec<u64> {
+pub(crate) fn sizes(asset: &Asset) -> Vec<u64> {
     let mut out = Vec::new();
     let mut ten: u64 = 1;
     loop {

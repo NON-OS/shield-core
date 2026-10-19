@@ -1,6 +1,7 @@
 //! Everything one account of the seed holds, derived on unlock and dropped on lock.
 //! The spend secret never crosses the FFI: crate internal, silent Debug, zeroed on drop.
 
+use super::deposit_key::DepositKey;
 use super::derive::field_key;
 use super::domain::SPEND_CONTEXT;
 use super::material::Material;
@@ -20,6 +21,7 @@ pub struct Account {
     nk: [Fp; RATE],
     view: ViewKey,
     receive: ReceiveKey,
+    deposit: DepositKey,
 }
 
 impl Account {
@@ -41,6 +43,7 @@ impl Account {
             nk: keys.nk,
             view: ViewKey::from_seed(seed),
             receive: ReceiveKey::from_seed(seed),
+            deposit: DepositKey::from_material(seed, index),
         })
     }
 
@@ -57,6 +60,11 @@ impl Account {
     /// The nullifier key. Crate internal, it never crosses the shell boundary.
     pub(crate) fn nk(&self) -> [Fp; RATE] {
         self.nk
+    }
+
+    /// The key this account's deposit blindings are drawn from. Crate internal, like `sk`.
+    pub(crate) fn deposit_key(&self) -> &DepositKey {
+        &self.deposit
     }
 }
 

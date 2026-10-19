@@ -19,3 +19,9 @@ pub const RECEIVE_CONTEXT: &str = "nox-shield 2026 receive key v1";
 pub const RECEIVE_ADDRESS_TAG: &[u8] = b"nox-shield/address/v2";
 /// The view key text checksum, with the prefix hashed in so an incoming key never reads as full.
 pub const VIEW_KEY_TAG: &[u8] = b"nox-shield/viewkey/v1";
+
+/// The account's deposit key, from which every deposit blinding of that account is drawn.
+pub const DEPOSIT_KEY_CONTEXT: &str = "nox-shield 2026 deposit key v1";
+/// One deposit's blinding, drawn from the deposit key with the chain, pool, account and index.
+/// Changing it loses every deposit a restore would otherwise find again.
+pub const DEPOSIT_CONTEXT: &str = "shield/deposit/v1";
