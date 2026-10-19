@@ -2,6 +2,10 @@
 //! A draw and its reservation happen under the one session lock, so two reviews alive at once never
 //! hold one index. A review's index is written only when the owner says yes, and the yes is refused
 //! when a deposit kept or found since the review has taken that index.
+//!
+//! An index kept for a deposit that never lands, a ticket left unpaid or a send that failed, leaves
+//! an empty index a restore must search across. Once `MOST_UNSEEN` such indices are kept, a draw
+//! takes one of them again instead of a new one, so the empty run stays short of `DEPOSIT_GAP`.
 
 use super::Session;
 use crate::error::WalletError;
@@ -14,6 +18,10 @@ use std::time::{Duration, Instant};
 /// for the reads between the draw and the review, after which the index can be drawn again.
 pub(crate) const RESERVED_FOR: Duration = Duration::from_secs(300);
 
+/// Indices kept and not yet seen in the pool past which a draw takes one of them again. If both
+/// deposits at such an index land, each is found, and the two show the same owner digest on chain.
+pub(crate) const MOST_UNSEEN: usize = 8;
+
 /// Indices drawn for one review, each with its blinding.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Draw {
@@ -25,8 +33,9 @@ pub(crate) struct Draw {
 }
 
 impl Session {
-    /// `n` indices of the active account, the lowest neither used nor reserved, each with its
-    /// blinding at `site`, reserved until `now` plus `RESERVED_FOR`.
+    /// `n` indices of the active account, each with its blinding at `site`, reserved until `now`
+    /// plus `RESERVED_FOR`: the lowest neither used nor reserved, or once `MOST_UNSEEN` kept indices
+    /// are not seen in the pool, those first.
     pub(crate) fn draw_deposits(
         &mut self,
         site: &DepositSite,
@@ -39,6 +48,11 @@ impl Session {
         slot.reserved.retain(|_, (until, _)| *until > now);
         let until = now.checked_add(RESERVED_FOR).ok_or(WalletError::Amount)?;
         let mut drawn = Vec::with_capacity(n);
+        let unseen = unseen(slot, site)?;
+        if unseen.len() >= MOST_UNSEEN {
+            let free = unseen.into_iter().filter(|(i, _)| !slot.reserved.contains_key(i));
+            drawn.extend(free.take(n));
+        }
         let mut index = 0u32;
         while drawn.len() < n {
             if !slot.state.deposit_used(index) && !slot.reserved.contains_key(&index) {
@@ -74,6 +88,24 @@ impl Session {
         self.slot_mut().reserved.remove(&index);
         Ok(())
     }
+}
+
+/// The indices `slot` kept whose deposit the pool has not been seen to store, lowest first, each
+/// with its blinding. A deposit is seen once a note with its blinding is held.
+fn unseen(
+    slot: &super::slot::Slot,
+    site: &DepositSite,
+) -> Result<Vec<(u32, [u64; 4])>, WalletError> {
+    let seen: std::collections::BTreeSet<[u64; 4]> =
+        slot.state.held().iter().map(|n| n.plain.blinding).collect();
+    let mut out = Vec::new();
+    for index in slot.state.used_deposits() {
+        let blinding = slot.account.deposit_key().blinding(site, index)?;
+        if !seen.contains(&blinding) {
+            out.push((index, blinding));
+        }
+    }
+    Ok(out)
 }
 
 #[cfg(test)]

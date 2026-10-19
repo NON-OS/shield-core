@@ -22,7 +22,7 @@ pub(crate) mod registry;
 pub(crate) mod relay_body;
 pub mod rewards;
 pub(crate) mod scan_history;
-mod session;
+pub(crate) mod session;
 mod settle;
 pub(crate) mod settle_self;
 pub mod spend;

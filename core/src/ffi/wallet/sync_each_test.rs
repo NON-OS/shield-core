@@ -7,11 +7,13 @@
 use super::super::deposit_site::active_site;
 use super::sync_account;
 use crate::custody::HardwareGuard;
+use crate::discovery::DEPOSIT_GAP;
 use crate::error::CustodyError;
 use crate::keys::note_nullifier_wire;
 use crate::net::rpc::RawLog;
 use crate::notes::NoteStatus;
 use crate::store::Row;
+use crate::wallet::session::deposit_draw::MOST_UNSEEN;
 use crate::wallet::{prepare_deposit, prepare_deposit_at, History, Paths, Session};
 use std::time::Instant;
 
@@ -122,6 +124,31 @@ fn one_commitment_at_two_leaves_is_two_deposits_everywhere() {
     for dir in [a_dir, b_dir, c_dir] {
         std::fs::remove_dir_all(dir).ok();
     }
+}
+
+/// Tickets left unpaid used to fill the whole search window, twenty-four of them then, so a deposit
+/// made after them was never found by a restore. Past `MOST_UNSEEN` unpaid tickets, a draw takes one
+/// of their indices again, so the deposit that lands stays inside the window however many there are.
+#[test]
+fn a_deposit_after_many_unpaid_tickets_comes_back() {
+    let (one_dir, mut one) = restored("unpaid-one");
+    let landed = deposit(&mut one, 2 * CENT);
+    sync_account(&mut one, 0, &history(&[landed], &[])).expect("synced");
+    for _ in 0..DEPOSIT_GAP + 8 {
+        deposit(&mut one, CENT);
+    }
+    let used: Vec<u32> = one.state().used_deposits().collect();
+    assert!(used.len() <= MOST_UNSEEN + 1, "unpaid tickets reuse their indices: {used:?}");
+    let last = deposit(&mut one, 5 * CENT);
+    let pool = history(&[landed, [6; 32], last], &[]);
+
+    let (two_dir, mut two) = restored("unpaid-two");
+    let [_, deposited, _] = sync_account(&mut two, 0, &pool).expect("synced");
+    assert_eq!(deposited, 2, "the deposit after the unpaid tickets is found");
+    let leaves: Vec<u64> = two.state().spendable().iter().map(|n| n.leaf_index).collect();
+    assert_eq!(leaves, vec![0, 2]);
+    std::fs::remove_dir_all(&one_dir).ok();
+    std::fs::remove_dir_all(&two_dir).ok();
 }
 
 #[test]

@@ -43,6 +43,19 @@ fn keep(s: &mut Session, index: u32, blinding: [u64; 4], stamp: u64) -> Result<(
     s.keep_deposit(index, note, stamp)
 }
 
+/// The deposit with `blinding` found in the pool at `leaf`, as a sync records it.
+fn seen_in_pool(s: &mut Session, blinding: [u64; 4], leaf: u64) {
+    let to = s.address();
+    let plain = prepare_deposit_at(&to, blinding, 10_000_000_000_000_000, 0, 50, 1)
+        .expect("a deposit")
+        .note;
+    let cm =
+        crate::notes::commitment(&crate::prover::pool_hasher(), &plain.note()).map(|f| f.value());
+    let status = crate::notes::NoteStatus::Unspent;
+    let record = crate::notes::NoteRecord { plain, leaf_index: leaf, cm, status, found_at: leaf };
+    s.record(Row::Found(record)).expect("found");
+}
+
 fn indices(drawn: &[(u32, [u64; 4])]) -> Vec<u32> {
     drawn.iter().map(|(i, _)| *i).collect()
 }
@@ -118,7 +131,8 @@ fn a_yes_is_refused_when_its_index_was_taken_since() {
     std::fs::remove_dir_all(&dir).ok();
 }
 
-/// Kept in any order, a draw never returns an index used or held, and blindings never repeat.
+/// Kept in any order and each seen in the pool, a draw never returns an index used or held, and
+/// blindings never repeat.
 #[test]
 fn a_draw_never_returns_an_index_used_or_held() {
     let (dir, mut s) = restored("order");
@@ -137,6 +151,7 @@ fn a_draw_never_returns_an_index_used_or_held() {
         assert!(!seen.contains(&blinding));
         seen.push(blinding);
         keep(&mut s, index, blinding, draw.stamp).expect("kept");
+        seen_in_pool(&mut s, blinding, u64::from(index));
         if state & 1 == 0 {
             s.release_deposits(draw.id);
         } else {

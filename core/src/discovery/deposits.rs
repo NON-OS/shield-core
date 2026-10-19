@@ -13,9 +13,10 @@ use stark_proofs::shield::note::{quads, Note};
 use std::collections::BTreeMap;
 
 /// Indices tried past the last one found before the search stops, as BIP-44 stops after twenty
-/// empty addresses. It must pass the 21 indices one split review and one single review can hold
-/// unsent, or a deposit made after an abandoned split would be missed.
-pub const DEPOSIT_GAP: u32 = 24;
+/// empty addresses. An empty run is at most the indices the reviews alive at once reserve, 21, and
+/// the indices kept and not seen in the pool, which a draw holds near `MOST_UNSEEN` and a split can
+/// raise by 20 until its deposits land, so 64 passes it with room.
+pub const DEPOSIT_GAP: u32 = 64;
 
 /// The deposits of `account` among `leaves`, each with the index its blinding was drawn at,
 /// searching from index `from` until `DEPOSIT_GAP` indices in a row find nothing.

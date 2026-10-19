@@ -104,6 +104,7 @@ fn every_deposit_value_is_tried() {
 /// The gap passes what one split review and one single review can hold unsent at once.
 #[test]
 fn the_gap_passes_what_reviews_can_hold() {
-    let held = u32::try_from(crate::wallet::deposit_split::MAX_PIECES).expect("small") + 1;
-    assert!(DEPOSIT_GAP > held);
+    let reviews = u32::try_from(crate::wallet::deposit_split::MAX_PIECES).expect("small") + 1;
+    let unseen = u32::try_from(crate::wallet::session::deposit_draw::MOST_UNSEEN).expect("small");
+    assert!(DEPOSIT_GAP > 2 * reviews + unseen, "reserved, kept unseen, and a split in flight");
 }
