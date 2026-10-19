@@ -4,10 +4,12 @@ import { button } from "../ui/button.js";
 import { app } from "../state/app.js";
 import { newKey } from "../device/new-key.js";
 import { passkey } from "../device/passkey.js";
+import { storage } from "../device/storage.js";
 
 async function create() {
   await app.run(async () => {
     await newKey(app);
+    await storage.keep();
     const words = await app.call("create");
     app.show("phrase", { words });
   });

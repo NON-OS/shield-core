@@ -5,6 +5,7 @@ import { field } from "../ui/field.js";
 import { quiet } from "../ui/quiet.js";
 import { app } from "../state/app.js";
 import { newKey } from "../device/new-key.js";
+import { storage } from "../device/storage.js";
 
 export function restore() {
   const byKey = app.params.byKey === true;
@@ -15,6 +16,7 @@ export function restore() {
     app.run(async () => {
       const text = input.input.value.trim();
       await newKey(app);
+      await storage.keep();
       if (byKey) {
         await app.call("restoreFromKey", text);
         app.show("overview");
