@@ -147,7 +147,7 @@ if (step === "gas") {
 // both wallets stay open in their own browser context until the journey ends, and a step that
 // stops is taken again after a reload, which keeps the context's storage.
 if (step === "shield") {
-  const [deposit, send, withdraw] = (process.env.AMOUNTS ?? "0.02 0.005 0.005").split(" ");
+  const [deposit, send, withdraw] = (process.env.AMOUNTS ?? "0.05 0.01 0.01").split(" ");
   const w = await open(b, base, wordsB);
   const B = await publicAddress(w);
   const done = new Set();
