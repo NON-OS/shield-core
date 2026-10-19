@@ -120,3 +120,55 @@ does not move to a server: a proving server learns the balance and the notes, wh
 whole design exists to avoid. The web build then keeps every other screen on that phone, the public
 account, receiving and the balance, and says plainly that a private spend has to be proved on a
 device that can: the native app on the same phone, or the web build on the user's own computer.
+
+## Requests through Nym
+
+How much longer a read takes through the Nym mixnet than directly, and how often it succeeds.
+
+### Method
+
+`node web/tests/nym.mjs <site dir> 20` serves a release, opens a page beside it in headless Chromium
+that uses the release's own wallet worker, bridge and tunnel, makes a throwaway wallet, and reads
+the public account's balances on Sepolia, the core's `publicBalances`, 20 times through Nym and 20
+times directly, one after the other, so both meet the same network. Then it reads the pool once
+each way. The first read through Nym starts the tunnel and is reported apart. A read the mixnet
+fails past its retries counts as failed: the page asks, and the runner answers "Stay on Nym", so
+nothing goes direct in its place. The success rate is over the 20 reads; the median and the 90th
+percentile are over the reads that succeeded. `--stand-in` serves a mix-fetch that is the
+browser's own fetch, which times the bridge and checks the core's replies through it, and says
+nothing about the mixnet.
+
+### Results, 19 October 2026
+
+On the machine above, whose network lets out port 443 only:
+
+| Route | Reads that succeeded | Median | 90th percentile | Pool read |
+|---|---|---|---|---|
+| Nym | 0 of 20 | | | failed after 39.3 s |
+| direct | 20 of 20 | 0.06 s | 0.08 s | 20.1 s |
+| stand-in for mix-fetch | 20 of 20 | 0.07 s | 0.08 s | 20.6 s |
+| direct, beside the stand-in | 20 of 20 | 0.07 s | 0.09 s | 19.7 s |
+
+Every Nym read failed the same way. The client loaded, compiled its wasm, read Nym's directory and
+opened a WebSocket to its pinned gateway, and the gateway's registration then closed after about
+10 s. Gateways listen for wss on port 9001, 558 of the 559 that offer it; the one on 443 is below
+the directory's performance floor. This network's proxy closes port 9001 after the upgrade, as
+`curl` to the same host shows: port 443 answers and port 9001 is reset. Three tunnels in a row
+took 32 to 47 s, then the page asked. So the latency through Nym is not measured here, and the 0 of
+20 says how this network treats port 9001.
+
+The stand-in shows what the route costs apart from the mixnet: nothing measurable, 0.07 s against
+0.07 s, and the pool history, the largest reply, comes back whole through the shared buffer.
+
+Nym's own figures for this client are about 10 s to set up the tunnel and 1 to 2 s for each round
+trip through the mixnet (`wasm/smolmix/tests/README.md` at the pinned commit). A read on a fresh
+connection is several round trips, for TCP, TLS and the request, and a host name's first lookup
+adds a DNS over HTTPS query, so expect several seconds for each read and about 10 s more for the
+first.
+
+### What still has to be measured
+
+On a network that reaches port 9001, the same command, 20 reads or more, gives the success rate and
+the added latency, median and 90th percentile. `web/tests/journey/run.mjs` with this build sends ETH
+between two wallets through Nym, since Nym is the default. The data a tunnel moves while it is up,
+its cover traffic included, is not measured; on a phone's data plan it matters.
