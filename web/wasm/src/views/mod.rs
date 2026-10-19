@@ -11,6 +11,7 @@ mod public_review;
 mod public_sent;
 mod public_shield;
 mod spend_ticket;
+mod watched_summary;
 
 pub use account_summary::account_summary;
 pub use balance::balance;
@@ -23,3 +24,4 @@ pub use public_review::public_review;
 pub use public_sent::public_sent;
 pub use public_shield::public_shield;
 pub use spend_ticket::spend_ticket;
+pub use watched_summary::watched_summary;
