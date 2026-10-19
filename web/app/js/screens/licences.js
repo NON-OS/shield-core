@@ -2,28 +2,34 @@ import { h } from "../ui/h.js";
 import { frame } from "../ui/frame.js";
 import { app } from "../state/app.js";
 
+const text = async (name) =>
+  (await fetch(new URL(`../../licences/${name}`, import.meta.url))).text();
+
+/** What the build linked, listed from the build itself, then each licence's full text. */
 export function licences() {
+  const { list, texts } = app.params;
+  if (!list) {
+    Promise.all([text("licences.txt"), text("licence-texts.txt")]).then(
+      ([l, t]) => app.show("licences", { list: l, texts: t, entered: true }),
+      (e) => app.fail(e),
+    );
+  }
+  const line = (s) => h("p", { class: "lead mono-line" }, s);
   return frame(
-    "05",
-    "Licences",
+    { number: "06", title: "Licences", backdrop: "settings", back: () => app.show("settings") },
     h(
       "p",
-      {},
-      "The wallet core and this page are free software under the GNU AGPL, version 3 or later.",
+      { class: "lead" },
+      "Generated from what the build linked, so it is what the page holds.",
     ),
-    h(
-      "p",
-      {},
-      "Geist and JetBrains Mono are under the SIL Open Font License 1.1: ",
-      h("a", { href: new URL("../../fonts/Geist-OFL.txt", import.meta.url).href }, "Geist"),
-      ", ",
+    list && h("div", { class: "licences" }, list.trim().split("\n").map(line)),
+    texts && [
+      h("p", { class: "label" }, "Notices"),
       h(
-        "a",
-        { href: new URL("../../fonts/JetBrainsMono-OFL.txt", import.meta.url).href },
-        "JetBrains Mono",
+        "div",
+        { class: "licences" },
+        texts.split("\n\f\n").map((block) => h("pre", { class: "notice" }, block.trim())),
       ),
-      ".",
-    ),
-    h("button", { type: "button", class: "link", onclick: () => app.show("settings") }, "Back"),
+    ],
   );
 }

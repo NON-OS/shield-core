@@ -1,65 +1,52 @@
-import { h } from "../ui/h.js";
 import { frame } from "../ui/frame.js";
 import { facts } from "../ui/facts.js";
+import { quiet } from "../ui/quiet.js";
 import { app } from "../state/app.js";
+import { watchIdle } from "../state/idle.js";
+import { watchInstall } from "../state/install.js";
+import { credits } from "./credits.js";
 
 const proofText = {
   ready: (p) =>
     p.measured ? `ready, a test proof took ${Math.round(p.measured.seconds)} s` : "ready",
-  unmeasured: () => "not yet timed on this device",
+  unmeasured: () => "not timed on this device yet",
   stopped: () => "this device could not finish a test proof",
   unable: () => "this browser cannot run the prover",
 };
 
 export function settings() {
-  const link = (label, to, params) =>
-    h("button", { type: "button", class: "link", onclick: () => app.show(to, params) }, label);
   const p = app.proving;
+  const idle = watchIdle.options.find(([s]) => s === app.idle)?.[1] ?? "after five minutes";
+  const installed = watchInstall.installed();
   return frame(
-    "04",
-    "Settings",
+    { number: "04", title: "Settings", backdrop: "settings", back: () => app.show("overview") },
     facts([
-      ["release", app.version],
+      ["app", app.version],
       ["key held in", "a passkey"],
-      ["released", "after you are verified"],
-      ["route", "browser, direct, no Tor"],
+      ["released", "after you are confirmed"],
+      ["route", "browser, direct"],
       ["lander", "none, you settle each spend"],
       ["private sends", (proofText[p?.state] ?? proofText.unable)(p ?? {})],
       ["threads", p?.threads ? String(p.threads) : "one, the page is not isolated"],
     ]),
-    h(
-      "nav",
-      { class: "actions", "aria-label": "Settings" },
-      link("Recovery words and keys", "keys"),
-      h(
-        "button",
-        {
-          type: "button",
-          class: "link",
-          onclick: () =>
-            app.run(async () => {
-              await app.call("lock");
-              app.show("locked");
-            }),
-        },
+    quiet([
+      ["Recovery words and keys", () => app.show("keys")],
+      [
         "Lock now",
-      ),
-      link("Time a proof in this browser", "measure"),
-      link("What this page trusts", "warning", { back: "settings" }),
-      link("Check this release", "release"),
-      link("Licences", "licences"),
-      link("Destroy this wallet", "wipe", { back: "settings" }),
-      link("Back", "overview"),
-    ),
-    h(
-      "section",
-      { class: "tile", "aria-label": "About" },
-      h(
-        "p",
-        {},
-        "NØNOS Wallet: private payments on Ethereum. NOX is the token; NOX Shield is the private layer.",
-      ),
-      h("p", { class: "muted" }, "Designed after Etna, the volcano of Sicily, where NØNOS began."),
-    ),
+        () =>
+          app.run(async () => {
+            await app.call("lock");
+            app.show("locked");
+          }),
+      ],
+      [`Lock when idle: ${idle}`, () => watchIdle.cycle()],
+      !installed && app.install && ["Add to the home screen", () => app.install()],
+      !installed && !app.install && ["Add to the home screen", () => app.show("install")],
+      ["What the web version trusts", () => app.show("warning", { back: "settings" })],
+      ["Check this release", () => app.show("release")],
+      ["Licences", () => app.show("licences")],
+      ["Destroy this wallet", () => app.show("wipe", { back: "settings" })],
+    ]),
+    credits(),
   );
 }

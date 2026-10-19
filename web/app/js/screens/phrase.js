@@ -6,8 +6,17 @@ import { app } from "../state/app.js";
 export function phrase() {
   const words = app.params.words ?? [];
   return frame(
-    "01",
-    "Recovery phrase",
+    {
+      number: "01",
+      title: "Recovery phrase",
+      backdrop: "backup",
+      footer: [
+        button("I have written them down", () => {
+          app.params.words?.fill("");
+          app.show("overview");
+        }),
+      ],
+    },
     h("p", { class: "statement" }, "Write these 24 words down."),
     h(
       "p",
@@ -18,14 +27,6 @@ export function phrase() {
       "ol",
       { class: "words", "aria-label": "Recovery words, in order" },
       words.map((w, i) => h("li", {}, `${i + 1}. ${w}`)),
-    ),
-    h(
-      "div",
-      { class: "actions" },
-      button("I have written them down", () => {
-        app.params.words?.fill("");
-        app.show("overview");
-      }),
     ),
   );
 }

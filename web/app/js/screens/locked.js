@@ -2,6 +2,7 @@ import { h } from "../ui/h.js";
 import { frame } from "../ui/frame.js";
 import { button } from "../ui/button.js";
 import { facts } from "../ui/facts.js";
+import { quiet } from "../ui/quiet.js";
 import { app } from "../state/app.js";
 import { giveKey } from "../device/key.js";
 
@@ -13,8 +14,12 @@ export function locked() {
       app.show("overview");
     });
   return frame(
-    "02",
-    "Locked",
+    {
+      number: "02",
+      title: "Locked",
+      backdrop: "history",
+      footer: [button("Unlock", unlock, { busy: "Unlocking" })],
+    },
     h("p", { class: "statement" }, "This wallet is sealed."),
     h(
       "p",
@@ -23,17 +28,8 @@ export function locked() {
     ),
     facts([
       ["key held in", "a passkey"],
-      ["released", "after you are verified"],
+      ["released", "after you are confirmed"],
     ]),
-    h(
-      "div",
-      { class: "actions" },
-      button("Unlock", unlock, { busy: "Unlocking" }),
-      h(
-        "button",
-        { type: "button", class: "link", onclick: () => app.show("wipe", { back: "locked" }) },
-        "The passkey is gone",
-      ),
-    ),
+    quiet([["The passkey is gone", () => app.show("wipe", { back: "locked" })]]),
   );
 }

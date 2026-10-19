@@ -1,14 +1,12 @@
 import { h } from "../ui/h.js";
 import { frame } from "../ui/frame.js";
-import { button } from "../ui/button.js";
+import { avatar } from "../ui/avatar.js";
+import { coinRow } from "../ui/coin-row.js";
+import { quiet } from "../ui/quiet.js";
+import { roundAction } from "../ui/round-action.js";
+import { svg } from "../ui/svg.js";
 import { app } from "../state/app.js";
 import { short } from "../text/short.js";
-
-const coins = [
-  ["ETH", "eth"],
-  ["NOX", "nox"],
-  ["USDC", "usdc"],
-];
 
 async function read() {
   const balances = await app.run(() => app.call("publicBalances", app.network));
@@ -18,14 +16,33 @@ async function read() {
   }
 }
 
+const gear = () =>
+  svg(22, 22, [
+    [
+      "circle",
+      { cx: "11", cy: "11", r: "3.2", fill: "none", stroke: "currentColor", "stroke-width": "1.8" },
+    ],
+    [
+      "path",
+      {
+        d: "M11 2.5v2.6M11 16.9v2.6M2.5 11h2.6M16.9 11h2.6M5 5l1.8 1.8M15.2 15.2 17 17M5 17l1.8-1.8M15.2 6.8 17 5",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "1.8",
+        "stroke-linecap": "round",
+      },
+    ],
+  ]);
+
 export function overview() {
   const held = app.public?.network === app.network ? app.public : null;
   const account = app.accounts?.find((a) => a.active);
+  const address = account?.publicAddress ?? "";
   const choose = h(
     "select",
     { id: "network", "aria-label": "Network" },
-    h("option", { value: "sepolia" }, "Sepolia, test network"),
-    h("option", { value: "mainnet" }, "Ethereum, real money"),
+    h("option", { value: "sepolia" }, "Sepolia"),
+    h("option", { value: "mainnet" }, "Ethereum"),
   );
   choose.value = app.network;
   choose.addEventListener("change", async () => {
@@ -33,10 +50,11 @@ export function overview() {
     await app.store.setMeta("network", app.network);
     app.public = null;
     app.draw();
+    read();
   });
+  const note = held ? "Read from a public endpoint" : "Not read yet";
   return frame(
-    "03",
-    "Wallet",
+    { number: "03", title: "Wallet", backdrop: "home" },
     h(
       "div",
       { class: "top" },
@@ -47,8 +65,13 @@ export function overview() {
       }),
       h(
         "button",
-        { type: "button", class: "icon-button", onclick: () => app.show("settings") },
-        "Settings",
+        {
+          type: "button",
+          class: "gear",
+          "aria-label": "Settings",
+          onclick: () => app.show("settings"),
+        },
+        gear(),
       ),
     ),
     h(
@@ -56,34 +79,29 @@ export function overview() {
       { class: "pills" },
       h(
         "button",
-        { type: "button", class: "icon-button", onclick: () => app.show("accounts") },
-        `Account ${(account?.index ?? 0) + 1}  ${short(account?.publicAddress ?? "")}`,
+        { type: "button", class: "pill", onclick: () => app.show("accounts") },
+        address && avatar(address),
+        `Account ${(account?.index ?? 0) + 1}  ${short(address)}`,
       ),
-      h("div", { class: "field" }, choose),
+      h("label", { class: "pill" }, choose),
     ),
     h(
       "section",
       { class: "tile", "aria-label": "Public balances" },
-      coins.map(([label, key]) =>
-        h(
-          "div",
-          { class: "balance" },
-          h("span", {}, label),
-          h("span", { class: "amount" }, held ? held[key] : "·"),
-        ),
-      ),
-      h("p", { class: "muted" }, held ? "Read from a public endpoint" : "Not read yet"),
-      button("Read again", read, { kind: "outline", busy: "Reading" }),
+      coinRow("eth", held ? held.eth : "·", note),
+      coinRow("nox", held ? held.nox : "·"),
+      coinRow("usdc", held ? held.usdc : "·"),
     ),
     h(
       "nav",
       { class: "round", "aria-label": "Actions" },
-      button("Send", () => app.show("accountSend")),
-      button("Receive", async () =>
+      roundAction("Send", "up", () => app.show("accountSend")),
+      roundAction("Receive", "down", async () =>
         app.show((await app.call("networkHasShield", app.network)) ? "receive" : "accountReceive"),
       ),
-      button("Shield", () => app.show("shield")),
+      roundAction("Shield", "shield", () => app.show("shield")),
     ),
+    quiet([["Read again", read]]),
   );
 }
 

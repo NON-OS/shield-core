@@ -15,24 +15,25 @@ async function create() {
 
 export function welcome() {
   return frame(
-    "01",
-    "NØNOS",
+    {
+      number: "01",
+      title: "NØNOS",
+      backdrop: "welcome",
+      footer: [
+        button("Create a wallet", create, { busy: "Making the passkey" }),
+        button("Restore from a phrase", () => app.show("restore"), { kind: "outline" }),
+      ],
+    },
     h("img", {
       class: "wordmark large",
       src: new URL("../../images/wordmark.svg", import.meta.url).href,
       alt: "NØNOS",
     }),
-    h("p", { class: "statement" }, "Shielded NOX. The keys never leave this browser."),
+    h("p", { class: "statement" }, "Shielded NOX. The keys never leave this device."),
     h(
       "p",
       { class: "lead" },
       "The balance is worked out here, from the pool itself. No server is told which notes are yours.",
-    ),
-    h(
-      "div",
-      { class: "actions" },
-      button("Create a wallet", create, { busy: "Making the passkey" }),
-      button("Restore from a phrase", () => app.show("restore"), { kind: "outline" }),
     ),
   );
 }

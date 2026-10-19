@@ -1,6 +1,8 @@
 import { h } from "../ui/h.js";
 import { frame } from "../ui/frame.js";
 import { button } from "../ui/button.js";
+import { quiet } from "../ui/quiet.js";
+import { valueBlock } from "../ui/value-block.js";
 import { app } from "../state/app.js";
 import { giveKey } from "../device/key.js";
 import { copyThenClear } from "../ui/copy.js";
@@ -19,8 +21,20 @@ export function keys() {
       app.show("keys", { key: await app.call("exportPublicKey", account) });
     });
   return frame(
-    "06",
-    "Keys",
+    {
+      number: "06",
+      title: "Keys",
+      backdrop: "backup",
+      back: () => app.show("settings"),
+      footer: p.key
+        ? [
+            button("Copy, cleared in a minute", () => copyThenClear(p.key), {
+              kind: "outline",
+              busy: "Copied",
+            }),
+          ]
+        : [],
+    },
     p.words &&
       h(
         "ol",
@@ -30,30 +44,16 @@ export function keys() {
     p.key && [
       h(
         "p",
-        { class: "warning" },
+        { class: "lead" },
         "This key moves everything the public account holds, on every network. Anyone who sees it owns the account.",
       ),
-      h("p", { class: "address" }, p.key),
-      button("Copy, cleared in a minute", () => copyThenClear(p.key), {
-        kind: "outline",
-        busy: "Copied",
-      }),
+      valueBlock(p.key),
     ],
     !p.words &&
       !p.key &&
-      h(
-        "div",
-        { class: "actions" },
-        button("Show the recovery words", words, { kind: "outline", busy: "Asking the passkey" }),
-        button("Export the account private key", key, {
-          kind: "outline",
-          busy: "Asking the passkey",
-        }),
-      ),
-    h(
-      "button",
-      { type: "button", class: "link", onclick: () => app.show("settings") },
-      p.words || p.key ? "Hide and go back" : "Back",
-    ),
+      quiet([
+        ["Show the recovery words", words],
+        ["Export the account private key", key],
+      ]),
   );
 }

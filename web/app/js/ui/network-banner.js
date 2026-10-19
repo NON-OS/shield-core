@@ -5,7 +5,7 @@ export function networkBanner(network) {
   const real = network === "mainnet";
   return h(
     "p",
-    { class: real ? "network real" : "network", role: "note" },
-    real ? "REAL MONEY · ETHEREUM MAINNET" : "TEST NETWORK · SEPOLIA",
+    { class: real ? "real-money real" : "real-money", role: "note" },
+    real ? "REAL MONEY  ·  ETHEREUM MAINNET" : "TEST NETWORK  ·  SEPOLIA",
   );
 }

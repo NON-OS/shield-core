@@ -7,51 +7,37 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  background: var(--ink);
 }
 
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
-  font: 400 1rem/1.5 var(--prose);
+  background: var(--ink);
+  color: var(--paper);
+  font: 400 17.5px/1.45 var(--prose);
   overflow-wrap: anywhere;
 }
 
 main {
   max-width: var(--column);
   margin: 0 auto;
-  padding: var(--gutter) var(--gutter) calc(var(--gutter) * 3);
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
 }
 
 h1,
-h2 {
-  margin: 0;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-h1 {
-  font-size: 1.5rem;
-}
-
-h2 {
-  font-size: 1.05rem;
-}
-
 p {
   margin: 0;
 }
 
 a {
-  color: var(--teal);
+  color: var(--cyan);
 }
 
 :focus-visible {
-  outline: 3px solid var(--teal);
+  outline: 2px solid var(--cyan);
   outline-offset: 2px;
 }
 
@@ -59,14 +45,6 @@ a {
    control, so it shows no ring. */
 h1:focus {
   outline: none;
-}
-
-.mono {
-  font-family: var(--mono);
-}
-
-.muted {
-  color: var(--muted);
 }
 
 .visually-hidden {

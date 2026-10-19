@@ -2,6 +2,7 @@ import { h } from "../ui/h.js";
 import { frame } from "../ui/frame.js";
 import { button } from "../ui/button.js";
 import { field } from "../ui/field.js";
+import { quiet } from "../ui/quiet.js";
 import { app } from "../state/app.js";
 import { newKey } from "../device/new-key.js";
 
@@ -23,8 +24,13 @@ export function restore() {
       app.show("finding");
     });
   return frame(
-    "01",
-    "Restore a wallet",
+    {
+      number: "01",
+      title: "Restore a wallet",
+      backdrop: "backup",
+      back: () => app.show("welcome"),
+      footer: [button("Restore", go, { busy: "Restoring" })],
+    },
     h(
       "p",
       { class: "statement" },
@@ -38,16 +44,11 @@ export function restore() {
         : "In order, separated by spaces. The core owns the word list and the checksum.",
     ),
     input,
-    h(
-      "div",
-      { class: "actions" },
-      button("Restore", go, { busy: "Restoring" }),
-      h(
-        "button",
-        { type: "button", class: "link", onclick: () => app.show("restore", { byKey: !byKey }) },
+    quiet([
+      [
         byKey ? "Use recovery words instead" : "Use a private key instead",
-      ),
-      h("button", { type: "button", class: "link", onclick: () => app.show("welcome") }, "Back"),
-    ),
+        () => app.show("restore", { byKey: !byKey }),
+      ],
+    ]),
   );
 }

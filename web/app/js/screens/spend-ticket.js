@@ -1,70 +1,50 @@
 import { h } from "../ui/h.js";
 import { button } from "../ui/button.js";
 import { facts } from "../ui/facts.js";
+import { valueBlock } from "../ui/value-block.js";
+import { copyThenClear } from "../ui/copy.js";
 import { app } from "../state/app.js";
 import { confirmed } from "../device/confirmed.js";
 import { untilMined } from "../state/poll.js";
+import { inFlight } from "../state/in-flight.js";
+import { zip } from "../files/zip.js";
+import { save } from "../files/save.js";
+import { steps } from "./landing-steps.js";
 
-const steps = [
-  "Proved and sealed in this browser",
-  "Settling on the pool, from your account",
-  "Settled",
-];
-
-function list(now) {
-  return h(
-    "ol",
-    { class: "steps", "aria-label": "Where this spend is" },
-    steps.map((s, i) =>
-      h(
-        "li",
-        { class: i === now ? "now" : null, "aria-current": i === now ? "step" : null },
-        h("span", { class: "mark", "aria-hidden": "true" }, i < now ? "✓" : i === now ? "●" : "○"),
-        h("span", {}, s),
-      ),
-    ),
+async function share(files) {
+  const read = await Promise.all(
+    files.map(async (path) => [path.split("/").pop(), await app.wallet.readFile(path)]),
   );
+  save(zip(read.filter(([, bytes]) => bytes)), "nonos-spend.zip");
 }
+
+const headline = (status) =>
+  ({
+    pending: "Settling on the pool.",
+    confirmed: "Settled on the pool.",
+    failed: "Your settlement failed on chain. Take back returns the notes.",
+  })[status] ?? "Proved and sealed on this device.";
 
 /**
  * A proved spend, settled by its owner. A browser cannot reach the landers, which are onion
- * services, so the settlement is sent from the public account, as the apps offer when no lander
- * lands a spend. What that reveals is said before it is confirmed.
+ * services, so this is the apps' "settle it yourself": the settlement goes from the public
+ * account, and what that reveals is said before it is confirmed.
  */
 export function ticket(p) {
   const t = p.ticket;
   const gave = t.weakened?.length ? `gave up ${t.weakened.join(", ")}` : "all kept";
-  if (p.settled) {
-    const status = p.status ?? "pending";
-    if (status === "pending" && !p.polling) {
-      p.polling = true;
-      untilMined(app, "sepolia", p.settled.hash, (s) => {
-        if (app.screen === "spend" && app.params.settled === p.settled && s !== "pending") {
-          app.show("spend", { ...p, status: s });
-        }
-      });
-    }
-    const line = {
-      pending: "Settling on the pool.",
-      confirmed: "Settled on the pool.",
-      failed: "Your settlement failed on chain. Take back returns the notes.",
-    }[status];
-    return [
-      list(status === "confirmed" ? 3 : 1),
-      h("p", { class: "statement", role: "status" }, line),
-      facts([
-        ["lander", "you"],
-        ["anonymity defaults", gave],
-        ["settlement", p.settled.hash],
-      ]),
-      h(
-        "div",
-        { class: "actions" },
-        status === "failed" &&
-          button("Take back", () => app.run(async () => app.call("takeBackPending"))),
-        button("Done with this spend", () => app.show("shield")),
-      ),
-    ];
+  const status = p.settled ? (p.status ?? "pending") : null;
+  if (p.settled && status === "pending" && !p.polling) {
+    p.polling = true;
+    untilMined(app, "sepolia", p.settled.hash, async (s) => {
+      if (s === "pending") return;
+      if (s === "confirmed") {
+        await inFlight.clear(app);
+        app.spend = null;
+      }
+      if (app.screen === "spend" && app.params.settled?.hash === p.settled.hash)
+        app.show("spend", { ...p, status: s });
+    });
   }
   const review = () =>
     app.run(async () => {
@@ -74,26 +54,69 @@ export function ticket(p) {
     app.run(async () => {
       await confirmed(app);
       const sent = await app.call("confirmPublicSend", p.review.id);
+      await inFlight.set(app, { withdraw: p.withdraw, ticket: t, settled: sent });
       app.show("spend", { ...p, review: null, settled: sent });
     });
   const r = p.review;
-  return [
-    list(1),
-    h("p", { class: "statement" }, "Proved and sealed in this browser."),
-    h(
-      "p",
-      { class: "lead" },
-      "A browser cannot reach the landers, which are onion services, so you settle this spend from your public account. That links the account to this spend in public. The amount and the recipient stay inside the proof, and the lander's part of the fee comes back to you.",
-    ),
-    r?.refusal && h("p", { class: "statement" }, r.refusal),
-    r && !r.refusal && facts([["network fee, at most", `${r.maxNetworkFee} ETH`]]),
-    facts([["anonymity defaults", gave]]),
-    h(
-      "div",
-      { class: "actions" },
-      r && !r.refusal
-        ? button("Confirm and settle", settle, { busy: "Sending" })
-        : button("Review the settlement", review, { busy: "Working it out" }),
-    ),
-  ];
+  const active = app.accounts?.find((a) => a.active);
+  const now = status === "confirmed" ? 3 : 1;
+  return {
+    body: [
+      h("p", { class: "statement", role: "status" }, headline(status)),
+      steps(now),
+      h(
+        "section",
+        { class: "tile", "aria-label": "This spend" },
+        h(
+          "div",
+          { class: "tile-row" },
+          h("span", { class: "name" }, "Lander"),
+          h("span", { class: "value" }, "you"),
+        ),
+        h(
+          "div",
+          { class: "tile-row" },
+          h("span", { class: "name" }, "Anonymity defaults"),
+          h("span", { class: "value" }, gave),
+        ),
+      ),
+      !p.settled &&
+        h(
+          "p",
+          { class: "lead" },
+          "A browser cannot reach the landers, which are onion services. Settling it yourself sends it from your public account, which links that account to this spend in public. The amount and the recipient stay inside the proof, and the lander's part of the fee comes back to you.",
+        ),
+      r?.refusal && h("p", { class: "statement" }, r.refusal),
+      r &&
+        !r.refusal &&
+        facts([
+          ["from", `Account ${(active?.index ?? 0) + 1}`],
+          ["network fee, at most", `${r.maxNetworkFee} ETH`],
+        ]),
+      p.settled && [
+        h("p", { class: "label" }, "Settlement"),
+        valueBlock(p.settled.hash),
+        button("Copy the hash", () => copyThenClear(p.settled.hash), { kind: "outline" }),
+      ],
+    ],
+    footer: [
+      !p.settled &&
+        (r && !r.refusal
+          ? button("Confirm and settle", settle, { busy: "Sending" })
+          : button("Settle it yourself", review, { busy: "Working it out" })),
+      status === "failed" &&
+        button("Take back", () =>
+          app.run(async () => {
+            await app.call("takeBackPending");
+            await inFlight.clear(app);
+            app.spend = null;
+            app.show("shield");
+          }),
+        ),
+      button("Share the files instead", () => app.run(() => share(t.files ?? [])), {
+        kind: "outline",
+      }),
+      button("Done", () => app.show("shield"), { kind: "outline" }),
+    ].filter(Boolean),
+  };
 }

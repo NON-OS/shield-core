@@ -7,6 +7,11 @@ import { openStore } from "./wallet/store.js";
 import { Wallet } from "./wallet/client.js";
 import { proving } from "./device/proving.js";
 import { loadCache } from "./release/cache.js";
+import { watchUpdates } from "./state/update.js";
+import { watchOnline } from "./state/online.js";
+import { watchInstall } from "./state/install.js";
+import { watchIdle } from "./state/idle.js";
+import { watchScan } from "./state/scan.js";
 
 const root = document.querySelector("main");
 
@@ -18,15 +23,16 @@ app.draw = async () => {
     await screen.enter();
     if (app.screen !== name) return;
   }
-  root.replaceChildren(...screen().flat(Infinity).filter(Boolean));
+  root.replaceChildren(...[screen()].flat(Infinity).filter(Boolean));
   document.title = `${root.querySelector("h1")?.textContent ?? "NØNOS"} · NØNOS Wallet`;
   root.querySelector("h1")?.focus();
 };
 
 async function boot() {
   app.draw();
-  if ("serviceWorker" in navigator)
-    navigator.serviceWorker.register("sw.js").catch(() => undefined);
+  watchOnline();
+  watchInstall();
+  watchUpdates();
   const release = await (await fetch("release.json")).json();
   const manifest = await (await fetch("release-manifest.json")).json();
   app.version = release.version;
@@ -42,6 +48,8 @@ async function boot() {
     threads: app.proving.threads,
     cache: cache ?? new Uint8Array(),
   });
+  watchIdle();
+  watchScan();
   const next = stored ? "locked" : "welcome";
   if (!(await app.store.meta("warned"))) return app.show("warning", { back: next });
   app.show(next);
