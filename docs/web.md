@@ -147,10 +147,6 @@ policy cannot tell a request the user allowed from one they did not. What keeps 
 while Nym is on is the code above. `web/tests/route.mjs` checks it in Chromium's net log: with Nym
 blocked, no RPC host is named before the user answers "Connect directly".
 
-The core's two thirdweb hosts answer an unauthenticated request with a rate-limit notice. Through
-Nym that is a reply the core cannot read, as it is natively, and directly the browser drops it for
-want of a CORS header. Neither is first in any list, and the core moves to the next host.
-
 For IP privacy from Cloudflare too, the answer is Tor Browser. Its higher security levels can turn
 off JavaScript or WebAssembly, which the wallet cannot run without.
 
