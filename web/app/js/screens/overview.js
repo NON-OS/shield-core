@@ -109,8 +109,10 @@ export function overview() {
   );
 }
 
-/** Read the accounts once, so the pill can name the one in use. */
+/** Read the accounts, so the pill can name the one in use, and the balances if not read yet. */
 overview.enter = async () => {
   app.accounts = await app.call("accounts").catch(() => app.accounts);
   await readDepositNotes(app);
+  // As in the apps, Home reads the public balances when it opens, once per network.
+  if (app.public?.network !== app.network) read();
 };
