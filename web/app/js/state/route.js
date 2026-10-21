@@ -8,4 +8,6 @@ export const route = {
   // "unreachable".
   tunnel: "idle",
   gateway: "",
+  // The request travelling now, for the status line: its host, size, start and try.
+  activity: null,
 };

@@ -8,9 +8,9 @@
 
 import { route } from "../state/route.js";
 import { draw, entryGateways } from "./directory.js";
+import { patience } from "./patience.js";
 
 const SETUP_MS = 60_000;
-const FETCH_MS = 90_000;
 const PREFIX = "wasm-client-storage-shield-";
 
 const hex = (n) =>
@@ -108,7 +108,7 @@ export class Tunnel {
   /** One request through the tunnel: its status and body, or a refusal of what failed. */
   async fetch(request) {
     await this.ready();
-    return this.#ask({ op: "fetch", ...request }, FETCH_MS);
+    return this.#ask({ op: "fetch", ...request }, patience(request.body));
   }
 
   /** End this tunnel after a failure; the next request starts one through the next gateway. */

@@ -2,6 +2,7 @@ import { h } from "./h.js";
 import { back as chevron } from "./back.js";
 import { app } from "../state/app.js";
 import { route } from "../state/route.js";
+import { liveText } from "./route-live.js";
 
 // Set through the style object, which the page's CSP allows, where a style attribute it would not.
 function band(name) {
@@ -50,6 +51,11 @@ export function frame({ number, title, back, backdrop, footer }, ...content) {
     backdrop && band(backdrop),
     h("div", { class: "content" }, update, failure, ...content),
     footer?.length > 0 && h("div", { class: "footer" }, ...footer),
-    h("footer", { class: "status" }, status.join("  ·  ")),
+    h(
+      "footer",
+      { class: "status" },
+      status.join("  ·  "),
+      h("span", { class: "route-live", "aria-live": "off" }, liveText() && `  ·  ${liveText()}`),
+    ),
   );
 }
