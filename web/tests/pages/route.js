@@ -6,11 +6,10 @@
 import { Wallet } from "./js/wallet/client.js";
 import { Tunnel } from "./js/route/tunnel.js";
 import { bridge } from "./js/route/bridge.js";
-import { nymHosts } from "./js/route/hosts.js";
 import { route } from "./js/state/route.js";
 
 const reads = Number(new URLSearchParams(location.search).get("reads") ?? 20);
-const tunnel = new Tunnel(new URL("./js/route/worker.js", import.meta.url), nymHosts.gateways);
+const tunnel = new Tunnel(new URL("./js/route/worker.js", import.meta.url));
 const wallet = new Wallet(
   new URL("./js/wallet/worker.js", import.meta.url),
   bridge(tunnel, () => {}),

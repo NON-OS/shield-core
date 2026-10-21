@@ -15,7 +15,6 @@ import { watchIdle } from "./state/idle.js";
 import { watchScan } from "./state/scan.js";
 import { Tunnel } from "./route/tunnel.js";
 import { bridge } from "./route/bridge.js";
-import { nymHosts } from "./route/hosts.js";
 
 const root = document.querySelector("main");
 
@@ -47,7 +46,7 @@ async function boot() {
   if (!(await screens.welcome.possible())) return app.show("unsupported");
   const cache = await loadCache(manifest.cache);
   app.cacheReady = Boolean(cache);
-  app.tunnel = new Tunnel(new URL("./route/worker.js", import.meta.url), nymHosts.gateways);
+  app.tunnel = new Tunnel(new URL("./route/worker.js", import.meta.url));
   // Only Settings shows the tunnel's state, and a redraw elsewhere would clear a field being typed.
   const redraw = () => app.screen === "settings" && app.draw();
   app.wallet = new Wallet(

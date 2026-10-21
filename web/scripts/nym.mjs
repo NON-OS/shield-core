@@ -33,7 +33,8 @@ export const nym = {
   sources() {
     return [
       ...nymHosts.api.map((host) => `https://${host}`),
-      ...nymHosts.gateways.map(({ host }) => `wss://${host}:${nymHosts.port}`),
+      // Any gateway the directory lists, on the ports gateways serve wss on.
+      ...nymHosts.ports.map((port) => `wss://*:${port}`),
     ];
   },
 

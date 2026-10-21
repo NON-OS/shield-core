@@ -1,12 +1,13 @@
-// The page's handle on the mixnet's worker: one tunnel through one pinned gateway, started on the
-// first request. A tunnel that fails is ended, and the next start takes the next gateway in a
-// rotation that begins at a random one, so the users of a release spread over the set.
+// The page's handle on the mixnet's worker: one tunnel through one entry gateway, started on the
+// first request. The gateway is drawn from Nym's directory as the tunnel starts. A tunnel that
+// fails is ended, its gateway is left out for the rest of the page, and the next start draws again.
 //
 // Each tunnel is a new Nym client under a name of its own, so two sessions share no Nym identity
 // and no gateway registration. Its storage is deleted when the tunnel ends, and on the next start
 // whatever an ended page left behind.
 
 import { route } from "../state/route.js";
+import { draw, entryGateways } from "./directory.js";
 
 const SETUP_MS = 60_000;
 const FETCH_MS = 90_000;
@@ -28,8 +29,9 @@ async function forget(name) {
 
 export class Tunnel {
   #url;
-  #gateways;
-  #turn;
+  #gateways = null;
+  #failed = new Set();
+  #gateway = null;
   #worker = null;
   #client = "";
   #ready = null;
@@ -38,10 +40,8 @@ export class Tunnel {
   #fresh = true;
   #epoch = 0;
 
-  constructor(url, gateways) {
+  constructor(url) {
     this.#url = url;
-    this.#gateways = gateways;
-    this.#turn = crypto.getRandomValues(new Uint32Array(1))[0] % gateways.length;
   }
 
   #ask(message, ms) {
@@ -80,15 +80,21 @@ export class Tunnel {
   /** The tunnel, started if it is not. */
   ready() {
     if (!this.#ready) {
-      const gateway = this.#gateways[this.#turn % this.#gateways.length];
       route.tunnel = "connecting";
-      route.gateway = gateway.host;
-      this.#ready = this.#start(gateway, this.#epoch);
+      this.#ready = this.#start(this.#epoch);
     }
     return this.#ready;
   }
 
-  async #start(gateway, epoch) {
+  async #start(epoch) {
+    // The directory is read once a page, and again when every gateway drawn from it has failed.
+    if (!this.#gateways || this.#gateways.every((g) => this.#failed.has(g.id))) {
+      this.#gateways = await entryGateways();
+      this.#failed.clear();
+    }
+    const gateway = draw(this.#gateways, this.#failed);
+    this.#gateway = gateway;
+    route.gateway = gateway.host;
     if (this.#fresh) await forget();
     this.#fresh = false;
     // A stop while the old storage was being deleted ends this start before it has a worker.
@@ -107,8 +113,8 @@ export class Tunnel {
 
   /** End this tunnel after a failure; the next request starts one through the next gateway. */
   reset() {
+    if (this.#gateway) this.#failed.add(this.#gateway.id);
     this.stop();
-    this.#turn += 1;
     route.tunnel = "unreachable";
   }
 

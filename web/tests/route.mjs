@@ -18,7 +18,11 @@ import { netHosts } from "./netlog.mjs";
 const [site, scratch] = process.argv.slice(2);
 const port = 8833;
 const manifest = JSON.parse(readFileSync(join(site, "release-manifest.json"), "utf8"));
-const nymHosts = manifest.mixnet.map((source) => new URL(source).hostname);
+// The directory's hosts. With them blocked no tunnel can learn a gateway, as when Nym is out of
+// reach; the policy's wildcard gateway sources name no host to block.
+const nymHosts = manifest.mixnet
+  .filter((s) => s.startsWith("https://"))
+  .map((s) => new URL(s).hostname);
 const log = join(scratch, "route-netlog.json");
 const words = join(scratch, "route.words");
 const say = (fact) => console.log(`${new Date().toISOString()} ${fact}`);
