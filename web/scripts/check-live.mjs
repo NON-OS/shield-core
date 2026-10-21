@@ -16,7 +16,9 @@ if (!origin || !/^[0-9a-f]{64}$/.test(want ?? "")) {
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const problems = [];
 const get = async (path) => {
-  const res = await fetch(new URL(path, origin), { cache: "no-store", redirect: "error" });
+  // Pages serves index.html at the directory and redirects its own name there.
+  const at = path === "index.html" ? "./" : path;
+  const res = await fetch(new URL(at, origin), { cache: "no-store", redirect: "error" });
   return { res, bytes: Buffer.from(await res.arrayBuffer()) };
 };
 
