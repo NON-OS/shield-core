@@ -42,10 +42,22 @@ async function time() {
     ["request.json", "seed.json", "entropy.hex"].map(text),
   );
   const start = performance.now();
-  core.prove_with_cache(request, seed, unhex(entropy.trim()), cache);
+  const proved = core.prove_with_cache(request, seed, unhex(entropy.trim()), cache);
+  const seconds = (performance.now() - start) / 1000;
+  const { point, proof, proof_bytes: proofBytes } = JSON.parse(proved);
+  // The public words pass 2^53, so they are kept as the prover wrote them.
+  const publics =
+    proved
+      .match(/"publics": \[([^\]]*)\]/)?.[1]
+      .split(", ")
+      .filter(Boolean) ?? [];
   return JSON.stringify({
-    seconds: (performance.now() - start) / 1000,
+    seconds,
     wasmBytes: memory.buffer.byteLength,
+    point,
+    proof,
+    proofBytes,
+    publics,
   });
 }
 

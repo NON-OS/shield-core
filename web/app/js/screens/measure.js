@@ -12,7 +12,8 @@ const unhex = (s) =>
   Uint8Array.from(s.replace(/^0x/, "").match(/../g) ?? [], (b) => parseInt(b, 16));
 
 function exportProof(r) {
-  const publics = JSON.stringify({ n_publics: r.publics.length, publics: r.publics });
+  // The words are written as numbers, as the prover wrote them, without passing through a double.
+  const publics = `{"n_publics":${r.publics.length},"publics":[${r.publics.join(",")}]}`;
   save(
     zip([
       ["launch-proof.bin", unhex(r.proof)],
