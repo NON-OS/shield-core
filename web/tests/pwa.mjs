@@ -28,6 +28,8 @@ const expect = (ok, what) => {
 };
 
 let server = serve(first);
+// A test that stops early must not leave its port taken for the next run.
+process.on("exit", () => server.kill());
 await wait(500);
 const browser = await chromium.launch({
   executablePath: "/opt/pw-browsers/chromium",

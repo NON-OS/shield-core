@@ -10,6 +10,8 @@ import { title } from "../title.mjs";
 export async function serve(site, port) {
   const script = new URL("../../scripts/serve.mjs", import.meta.url).pathname;
   const server = spawn(process.execPath, [script, site, String(port)], { stdio: "ignore" });
+  // A run that stops early must not leave its port taken for the next one.
+  process.on("exit", () => server.kill());
   await new Promise((r) => setTimeout(r, 500));
   return server;
 }

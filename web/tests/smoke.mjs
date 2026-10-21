@@ -15,6 +15,8 @@ const server = spawn(
   [new URL("../scripts/serve.mjs", import.meta.url).pathname, site, String(port)],
   { stdio: "ignore" },
 );
+// A test that stops early must not leave its port taken for the next run.
+process.on("exit", () => server.kill());
 await new Promise((r) => setTimeout(r, 500));
 const browser = await chromium.launch({
   executablePath: "/opt/pw-browsers/chromium",
