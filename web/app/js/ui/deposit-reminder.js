@@ -7,7 +7,8 @@ import { standardWithin } from "../text/standard-within.js";
  * fix that: a private send to this wallet's own address, whose notes are sealed to its key.
  */
 export function depositReminder(app) {
-  const held = (app.depositNotes ?? []).find((b) => b.spendable > 0 || b.pending > 0);
+  // A note in flight is being spent; once it settles the words have nothing more to restore.
+  const held = (app.depositNotes ?? []).find((b) => b.spendable > 0);
   if (!held) return null;
   const coin = held.coin;
   // The pool's smallest sizes, and twice the fee's fixed part as room for its network part.
@@ -22,10 +23,9 @@ export function depositReminder(app) {
     h(
       "p",
       { class: "lead" },
-      `${held.spendable > 0 ? held.spendableText : held.pendingText} ${coin.toUpperCase()} in deposit notes is kept only in this browser. The recovery words do not bring it back until it is sent privately, to anyone or to this wallet itself.`,
+      `${held.spendableText} ${coin.toUpperCase()} in deposit notes is kept only in this browser. The recovery words do not bring it back until it is sent privately, to anyone or to this wallet itself.`,
     ),
-    held.spendable > 0 &&
-      !amount &&
+    !amount &&
       h(
         "p",
         { class: "lead" },
