@@ -3,6 +3,7 @@
 // the next open reads the pool when the shield is shown.
 
 import { app } from "./app.js";
+import { readPool } from "./read-pool.js";
 
 const PERIOD = 300;
 const JITTER = 60;
@@ -13,7 +14,7 @@ export function watchScan() {
   const tick = async () => {
     if (unlockedScreens.has(app.screen) && !app.wallet?.busy() && !app.offline) {
       if (await app.call("networkHasShield", app.network).catch(() => false)) {
-        const chain = await app.call("syncChain").catch(() => null);
+        const chain = await readPool().catch(() => null);
         if (chain) {
           app.chain = chain;
           app.shielded = chain.balances;
