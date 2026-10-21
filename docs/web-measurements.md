@@ -150,7 +150,7 @@ On the machine above, whose network lets out port 443 only:
 | direct, beside the stand-in | 20 of 20 | 0.07 s | 0.09 s | 19.7 s |
 
 Every Nym read failed the same way. The client loaded, compiled its wasm, read Nym's directory and
-opened a WebSocket to its pinned gateway, and the gateway's registration then closed after about
+opened a WebSocket to its gateway, and the gateway's registration then closed after about
 10 s. Gateways listen for wss on port 9001, 558 of the 559 that offer it; the one on 443 is below
 the directory's performance floor. This network's proxy closes port 9001 after the upgrade, as
 `curl` to the same host shows: port 443 answers and port 9001 is reset. Three tunnels in a row

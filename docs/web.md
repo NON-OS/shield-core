@@ -111,8 +111,11 @@ and wakes the wallet's worker, whose core reads the reply as it would any other.
 limits apply: a reply above 16 MiB is refused.
 
 The tunnel starts with the first request. Each tunnel is a fresh Nym client under a random name,
-registered with one gateway from a pinned set of eight, starting at a random one, and it picks an
-exit from Nym's directory. Its keys live in IndexedDB as `wasm-client-storage-shield-…` and are
+registered with one entry gateway, and it picks an exit from Nym's directory. The gateway is drawn
+from Nym's directory as the tunnel starts (`web/app/js/route/directory.js`): every gateway listed
+with a host name, a wss port of 9001 or 443 and a performance of at least 0.9, about 535 of them,
+drawn at random with performance as the weight. A gateway that fails is left out for the rest of
+the page, and the directory is read again only when every one drawn has failed. Its keys live in IndexedDB as `wasm-client-storage-shield-…` and are
 deleted when the tunnel ends, so two sessions share no Nym identity.
 
 ### Never direct without asking
@@ -132,15 +135,17 @@ on Nym again. The status line at the foot of every screen says "nym mixnet" or "
 
 The policy names every host the page may connect to: its own origin, Nym's directory
 (`validator.nymtech.net`, and Nym's two fallbacks `nym-frontdoor.global.ssl.fastly.net` and
-`cdn1.media-platform.net`), the pinned gateways as `wss://<host>:9001`, and the core's RPC
-endpoints. The gateways come from `web/app/js/route/hosts.js`; each is a different operator in a
-different country, and `web/scripts/check-gateways.mjs` says which are still listed as usable.
+`cdn1.media-platform.net`), any gateway as `wss://*:9001` and `wss://*:443`, and the core's RPC
+endpoints. `web/scripts/check-gateways.mjs` says how many gateways the directory lists as usable
+now, and fails below 50.
 
-A pinned set is tighter than `wss:` or `wss://*:9001` for any gateway, which a changed file could
-use to send data anywhere. What it costs: the operators of eight gateways see the IP addresses of
-every Shield Web user who reaches them, where an unpinned client would spread over about 550. Each
-gateway sees only its own share, and never the requests. A pinned gateway that leaves the network
-costs a retry, and a release with fewer than half its gateways usable should pin again.
+The trade-off is plain. A policy that named a few pinned gateways would be tighter: with
+`wss://*:9001`, a changed file could open a WebSocket on that port to any host. In return no
+release carries a list that ages, and the users of the page spread over every usable gateway
+instead of a handful whose operators would see all their IP addresses. Each gateway sees only its
+own share, and never the requests. What a changed file could do is the risk in
+[Code integrity](#code-integrity), which the release hashes and `check-live.mjs` are there to
+catch.
 
 The RPC hosts stay in the policy, because the direct fallback is the browser's own request and the
 policy cannot tell a request the user allowed from one they did not. What keeps a request off them
@@ -187,7 +192,8 @@ and from Chromium's net log:
   through it has not been made yet; [web-measurements.md](web-measurements.md) says why.
 
 Left to choose a gateway at random, 3.0.0 picked one without a host name for wss and failed
-("does not support the wss protocol"). The pinned set avoids that.
+("does not support the wss protocol"). The page draws only gateways that list one, and names the
+gateway to the client, which avoids that.
 
 The licences screen lists the two packages, the JavaScript mix-tunnel bundles (Comlink and two
 Rollup helpers) and the 533 crates smolmix-wasm links, made by `web/scripts/nym-licences.mjs` from a
@@ -234,8 +240,8 @@ manifest hash.
 
 The page loads nothing from anywhere but its own origin. The Content Security Policy allows script,
 style, fonts and workers from the site itself, lets the page compile its own wasm and the Nym
-client's and nothing else, and allows connections to Nym's directory, the pinned gateways and the
-core's endpoints only, as in [The network](#the-network). The one third-party code the page runs,
+client's and nothing else, and allows connections to Nym's directory, Nym's gateways on their wss
+ports and the core's endpoints only, as in [The network](#the-network). The one third-party code the page runs,
 the Nym client, is served from the site, listed in the manifest and checked like every other file.
 There are no analytics and no CDN at runtime. Text from a server or a field is always set as text,
 never parsed as markup.
