@@ -45,6 +45,11 @@ createServer(async (req, res) => {
     res.writeHead(403).end();
     return;
   }
+  // As Cloudflare Pages does, a page's own name redirects to its directory.
+  if (rules && path.endsWith("/index.html")) {
+    res.writeHead(308, { Location: path.slice(0, -"index.html".length) }).end();
+    return;
+  }
   try {
     if ((await stat(file)).isDirectory()) file = join(file, "index.html");
     const body = await readFile(file);
