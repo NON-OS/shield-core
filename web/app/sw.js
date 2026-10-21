@@ -15,6 +15,22 @@ const CACHE = `shield-${RELEASE}`;
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 const sha256 = async (buf) => hex(await crypto.subtle.digest("SHA-256", buf));
 
+const unredirected = async (res) =>
+  new Response(await res.arrayBuffer(), {
+    status: res.status,
+    statusText: res.statusText,
+    headers: res.headers,
+  });
+
+async function brokenBefore() {
+  for (const key of await caches.keys()) {
+    if (key === CACHE || !key.startsWith("shield-")) continue;
+    const page = await (await caches.open(key)).match("./");
+    if (page?.redirected) return true;
+  }
+  return false;
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -35,9 +51,14 @@ self.addEventListener("install", (event) => {
         if (!res.ok || (await sha256(await res.clone().arrayBuffer())) !== file.sha256) {
           throw new Error(`${file.path} does not match the release manifest`);
         }
-        await cache.put(file.path, res.clone());
-        if (file.path === "index.html") await cache.put("./", res);
+        // A redirected response can never answer a page load, so none is kept as one.
+        const kept = res.redirected ? await unredirected(res) : res;
+        await cache.put(file.path, kept.clone());
+        if (file.path === "index.html") await cache.put("./", kept);
       }
+      // A release whose worker kept the page as a redirect cannot open, so it can never offer
+      // "Update ready". This one takes over from it at once instead of waiting.
+      if (await brokenBefore()) await self.skipWaiting();
       await cache.put("release.json", head);
       await cache.put("release-manifest.json", listing);
     })(),
@@ -64,6 +85,6 @@ self.addEventListener("fetch", (event) => {
     caches
       .open(CACHE)
       .then((cache) => cache.match(event.request, { ignoreSearch: true }))
-      .then((hit) => hit ?? fetch(event.request)),
+      .then((hit) => (hit && !hit.redirected ? hit : fetch(event.request))),
   );
 });
