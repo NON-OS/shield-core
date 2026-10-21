@@ -55,8 +55,13 @@ try {
   const status = () => page.locator("footer.status").textContent();
   if (!(await status()).includes("nym mixnet")) problems.push("the status line does not say nym");
 
+  // Home reads the balances as it opens, so the question may already be on its way.
   let started = Date.now();
-  await w.click("Read again");
+  const home = await asked.waitFor({ timeout: 10_000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!home) await w.click("Read again");
   await asked.waitFor({ timeout: 5 * 60 * 1000 });
   say(`asked after ${((Date.now() - started) / 1000).toFixed(1)} s`);
   const question = await asked.textContent();
