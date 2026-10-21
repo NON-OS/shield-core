@@ -49,7 +49,7 @@ export function frame({ number, title, back, backdrop, footer }, ...content) {
     h("hr", { class: "rule" }),
     backdrop && band(backdrop),
     h("div", { class: "content" }, update, failure, ...content),
-    footer?.length && h("div", { class: "footer" }, ...footer),
+    footer?.length > 0 && h("div", { class: "footer" }, ...footer),
     h("footer", { class: "status" }, status.join("  ·  ")),
   );
 }
