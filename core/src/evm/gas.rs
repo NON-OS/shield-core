@@ -43,13 +43,38 @@ pub(super) fn base_fee(block: &str) -> Result<u128, NetError> {
     u128::from_str_radix(body, 16).map_err(|_| NetError::ReplyShape)
 }
 
-/// The gas limit: 21,000 for ether to an address with no code, otherwise the
-/// estimate with a quarter on top, since a token transfer's cost can move.
+/// The least gas any transaction takes.
+pub(super) const FLOOR: u128 = 21_000;
+
+/// The most a plain ether transfer adds to its estimate.
+pub(super) const ETHER_MARGIN: u128 = 21_000;
+
+/// The most gas a plain ether transfer may be given. One that creates an
+/// account takes about 207,000; an estimate far above that is a server's error
+/// or a lie, and is refused before it can inflate the fee shown.
+pub(super) const ETHER_CEILING: u128 = 1_000_000;
+
+/// The most gas one transaction may use, EIP-7825's cap of 2^24.
+pub(super) const TX_CAP: u128 = 1 << 24;
+
+/// The gas limit from the node's estimate, or none when it passes a ceiling.
+/// Ether to an address with no code gets a tenth on top, at most
+/// `ETHER_MARGIN` and never under `FLOOR`: a fixed 21,000 fails where a
+/// transfer that creates an account costs more. Anything else gets a quarter
+/// on top, since a token transfer's cost can move. No limit passes `TX_CAP`.
 pub(super) fn limit(estimate: u128, plain_ether: bool) -> Option<u64> {
-    if plain_ether {
-        return Some(21_000);
+    let padded = if plain_ether {
+        if estimate > ETHER_CEILING {
+            return None;
+        }
+        let margin = estimate.checked_div(10)?.min(ETHER_MARGIN);
+        estimate.checked_add(margin)?.max(FLOOR)
+    } else {
+        estimate.checked_mul(5)?.checked_div(4)?
+    };
+    if padded > TX_CAP {
+        return None;
     }
-    let padded = estimate.checked_mul(5)?.checked_div(4)?;
     u64::try_from(padded).ok()
 }
 
@@ -73,14 +98,40 @@ mod tests {
     }
 
     #[test]
-    fn an_absurd_fee_is_refused_and_ether_to_a_person_is_21000() {
+    fn an_absurd_fee_is_refused() {
         let block = one(r#"{"id":1,"result":{"baseFeePerGas":"0xe8d4a51000"}}"#).unwrap();
         let tip = one(r#"{"id":2,"result":"0x1"}"#).unwrap();
         assert_eq!(fees(&block, &tip).unwrap(), None);
         let calm = one(r#"{"id":1,"result":{"baseFeePerGas":"0x1"}}"#).unwrap();
         let greedy = one(r#"{"id":2,"result":"0x2540be400"}"#).unwrap();
         assert_eq!(fees(&calm, &greedy).unwrap().unwrap().max_priority_fee, 5_000_000_000);
-        assert_eq!(limit(99_999, true), Some(21_000));
         assert_eq!(limit(40_000, false), Some(50_000));
+    }
+
+    // Sepolia's estimates for 0.01 ETH to an account that did not exist yet,
+    // where 21,000 ran out of gas on chain, and to one that did.
+    #[test]
+    fn ether_to_a_fresh_account_gets_what_the_node_asked_for_and_a_tenth() {
+        assert_eq!(limit(207_391, true), Some(228_130));
+    }
+
+    #[test]
+    fn ether_to_an_existing_account_never_gets_less_than_21000() {
+        assert_eq!(limit(12_000, true), Some(21_000));
+        assert_eq!(limit(21_000, true), Some(23_100));
+    }
+
+    #[test]
+    fn the_margin_on_ether_stops_at_21000() {
+        assert_eq!(limit(900_000, true), Some(921_000));
+    }
+
+    #[test]
+    fn an_estimate_past_a_ceiling_is_refused() {
+        assert_eq!(limit(1_000_000, true), Some(1_021_000));
+        assert_eq!(limit(1_000_001, true), None);
+        assert_eq!(limit(50_000_000, true), None);
+        assert_eq!(limit(13_421_773, false), Some(16_777_216));
+        assert_eq!(limit(13_421_774, false), None);
     }
 }

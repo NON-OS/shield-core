@@ -61,12 +61,28 @@ pub(super) fn nox_arrival(
     })
 }
 
-/// The gas limit, or none when the estimate says the transfer would fail.
-pub(super) fn gas_limit(estimate: &Answer, plain: bool) -> Option<u64> {
-    if plain {
-        return super::gas::limit(0, true);
-    }
-    super::gas::limit(estimate.quantity().ok()?, false)
+/// The gas limit, or why the send stops: the node gave no estimate, which is
+/// how it says the transfer would fail, or one past what such a send takes.
+/// Ether to a person fails an estimate only when the node cannot price it, so
+/// that one is worth another try.
+pub(super) fn gas_limit(estimate: &Answer, plain: bool) -> Result<u64, &'static str> {
+    let Ok(asked) = estimate.quantity() else {
+        return Err(if plain {
+            "The network could not price this transfer. Nothing was sent; try again."
+        } else {
+            "The network refused this transfer when it was tried."
+        });
+    };
+    super::gas::limit(asked, plain).ok_or(
+        "A server asked for far more gas than this transfer takes. Nothing was sent; try again.",
+    )
+}
+
+/// Whether an ether send asks for more than the account holds, checked before
+/// the gas, so that refusal names the balance.
+pub(super) fn ether_short(order: &Order, ether: u128) -> Option<&'static str> {
+    (order.coin == Coin::Eth && ether < order.amount)
+        .then_some("The ETH balance does not cover that.")
 }
 
 /// Whether the ether on hand covers what the send takes of it.
@@ -115,5 +131,35 @@ pub(super) fn usdc_arrival(
         Answer::Result(_) => Ok(Arrival { arrives: amount, fee: 0, bps: 0 }),
         Answer::Reverted(data) => Err(super::usdc_revert::why(data)),
         Answer::Failed => Err("USDC refused this transfer when it was tried."),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::super::reply::one;
+    use super::*;
+
+    #[test]
+    fn ether_to_a_person_takes_the_estimate_and_stops_without_one() {
+        let fresh = one(r#"{"id":1,"result":"0x32a1f"}"#).unwrap();
+        assert_eq!(gas_limit(&fresh, true), Ok(228_130));
+        assert!(gas_limit(&Answer::Failed, true).unwrap_err().contains("try again"));
+        assert!(gas_limit(&Answer::Reverted(Vec::new()), true).is_err());
+        assert!(gas_limit(&Answer::Failed, false).unwrap_err().contains("refused"));
+    }
+
+    #[test]
+    fn a_hostile_estimate_is_refused_before_it_sets_the_fee() {
+        let greedy = one(r#"{"id":1,"result":"0x2faf080"}"#).unwrap();
+        assert!(gas_limit(&greedy, true).unwrap_err().contains("far more gas"));
+    }
+
+    #[test]
+    fn more_ether_than_held_names_the_balance() {
+        let order = Order { coin: Coin::Eth, to: [1u8; 20], amount: 10 };
+        assert_eq!(ether_short(&order, 9), Some("The ETH balance does not cover that."));
+        assert_eq!(ether_short(&order, 10), None);
+        assert_eq!(ether_short(&Order { coin: Coin::Nox, ..order }, 0), None);
     }
 }
