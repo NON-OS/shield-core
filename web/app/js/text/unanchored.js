@@ -2,7 +2,7 @@
 // not yet under a root the association registry holds. The balance on screen says otherwise, so
 // that case is told as it is.
 
-const number = (text) => Number(String(text ?? "").replace(/,/g, ""));
+const number = (text) => Number(String(text ?? "0").replace(/,/g, "")) || 0;
 
 export function unanchored(error, balances, coin, amount, fee) {
   if (error?.kind !== "Insufficient") return null;

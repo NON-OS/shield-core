@@ -14,3 +14,10 @@ test("a refusal the balance does not cover, or another failure, is left as it is
   assert.equal(unanchored({ kind: "Insufficient" }, balances, "nox", "1000"), null);
   assert.equal(unanchored({ kind: "TooSoon" }, balances, "eth", "0.01"), null);
 });
+
+test("a fee not read yet counts as none", () => {
+  assert.match(
+    unanchored({ kind: "Insufficient" }, balances, "eth", "0.01", undefined),
+    /registry/,
+  );
+});
