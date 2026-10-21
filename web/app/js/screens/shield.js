@@ -7,13 +7,19 @@ import { quiet } from "../ui/quiet.js";
 import { roundAction } from "../ui/round-action.js";
 import { app } from "../state/app.js";
 import { inFlight } from "../state/in-flight.js";
+import { readPool } from "../state/read-pool.js";
 import { landing } from "./landing.js";
 import { depositReminder } from "../ui/deposit-reminder.js";
 import { readDepositNotes } from "../state/deposit-notes.js";
 
+// The line under a coin: what is in flight in that coin, and under the first row what the pool
+// read found. A coin's line never speaks for another coin.
+function moving(balances, coin) {
+  const b = balances.find((x) => x.coin === coin && x.pending > 0);
+  return b && `${b.pendingText} ${coin.toUpperCase()} in flight`;
+}
+
 function caption(balances) {
-  const pending = balances.find((b) => b.pending > 0);
-  if (pending) return `${pending.pendingText} ${pending.coin.toUpperCase()} in flight`;
   if (!app.chain) return "Not read from the pool yet";
   if (app.chain.received === 0 && app.chain.deposited === 0)
     return "Nothing received at this address yet";
@@ -22,7 +28,7 @@ function caption(balances) {
 }
 
 export async function sync() {
-  const chain = await app.run(() => app.call("syncChain"));
+  const chain = await app.run(() => readPool());
   if (!chain) return;
   app.chain = chain;
   app.shielded = chain.balances;
@@ -58,8 +64,8 @@ export function shield() {
     h(
       "section",
       { class: "tile", "aria-label": "Shielded balances" },
-      coinRow("nox", of("nox"), caption(balances)),
-      coinRow("eth", of("eth")),
+      coinRow("nox", of("nox"), moving(balances, "nox") ?? caption(balances)),
+      coinRow("eth", of("eth"), moving(balances, "eth")),
     ),
     spendable && meter(app.chain),
     depositReminder(app),
