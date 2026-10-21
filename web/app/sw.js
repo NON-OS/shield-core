@@ -29,7 +29,9 @@ self.addEventListener("install", (event) => {
       }
       const cache = await caches.open(CACHE);
       for (const file of manifest.files) {
-        const res = await fetch(file.path, fresh);
+        // Cloudflare Pages answers index.html with a redirect to the directory, and a redirected
+        // response cannot answer a page load, so the page is fetched at its own address.
+        const res = await fetch(file.path === "index.html" ? "./" : file.path, fresh);
         if (!res.ok || (await sha256(await res.clone().arrayBuffer())) !== file.sha256) {
           throw new Error(`${file.path} does not match the release manifest`);
         }
