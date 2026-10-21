@@ -6,8 +6,10 @@
 //   node web/tests/pwa.mjs <release dir> <newer release dir>
 
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { chromium } from "playwright";
 
 const [first, second] = process.argv.slice(2);
@@ -31,11 +33,13 @@ let server = serve(first);
 // A test that stops early must not leave its port taken for the next run.
 process.on("exit", () => server.kill());
 await wait(500);
-const browser = await chromium.launch({
+// A persistent profile, since Chromium never offers to install from an incognito one.
+const profile = mkdtempSync(join(tmpdir(), "pwa-"));
+const context = await chromium.launchPersistentContext(profile, {
   executablePath: "/opt/pw-browsers/chromium",
   headless: true,
+  viewport: { width: 390, height: 844 },
 });
-const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
 const page = await context.newPage();
 const version = () => page.evaluate(() => document.querySelector(".status")?.textContent ?? "");
 
@@ -90,6 +94,7 @@ if (second) {
   expect(after !== before, `the new release opens after one reload (${before} to ${after})`);
 }
 
-await browser.close();
+await context.close();
+rmSync(profile, { recursive: true, force: true });
 server.kill();
 if (failures.length) process.exit(1);
