@@ -195,7 +195,8 @@
 }
 
 .coin-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 34px minmax(6.5rem, 1fr) minmax(0, max-content);
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
@@ -210,7 +211,6 @@
 }
 
 .coin-row .names {
-  flex: 1;
   display: grid;
 }
 
@@ -224,6 +224,10 @@
 }
 
 .coin-row .amount {
+  /* A full-precision balance can be long; it wraps inside its own column instead of squeezing the
+     coin's name into one letter a line. */
+  overflow-wrap: anywhere;
+  text-align: right;
   font: 500 23.75px var(--prose);
   font-variant-numeric: tabular-nums;
 }
