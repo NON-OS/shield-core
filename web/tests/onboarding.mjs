@@ -152,6 +152,10 @@ await click("Time a proof in this browser");
 await heading("Measure");
 await check("measure");
 await click("Back");
+await heading("Shield");
+await click("Back");
+await heading("Wallet");
+await click("Settings");
 await heading("Settings");
 for (const [link, name] of [
   ["Recovery words and keys", "Keys"],

@@ -99,7 +99,7 @@ export function shield() {
             await sync();
           }),
       ],
-      ["Time a proof in this browser", () => app.show("measure")],
+      ["Time a proof in this browser", () => app.show("measure", { from: "shield" })],
       [
         details ? "Hide details" : "Details",
         () => app.show("shield", { details: !details, entered: true }),

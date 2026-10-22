@@ -37,10 +37,12 @@ async function shareCard(r) {
 export function measure() {
   const p = app.params;
   const r = p.result;
+  // Back returns to the screen that opened this one, kept through the run and its result.
+  const from = p.from ?? "shield";
   const run = () =>
     app.run(async () => {
       await proving.started(app.store);
-      app.show("measure", { running: true });
+      app.show("measure", { running: true, from });
       const result = await app.wallet.time();
       await proving.finished(app.store, {
         seconds: result.seconds,
@@ -48,7 +50,7 @@ export function measure() {
         at: Date.now(),
       });
       app.proving = await proving(app.store);
-      app.show("measure", { result });
+      app.show("measure", { result, from });
     });
   const threads = app.proving?.threads || 1;
   return frame(
@@ -56,7 +58,7 @@ export function measure() {
       number: "05",
       title: "Measure",
       backdrop: "proving",
-      back: p.running ? null : () => app.show("settings"),
+      back: p.running ? null : () => app.show(from),
       footer: p.running
         ? []
         : [
