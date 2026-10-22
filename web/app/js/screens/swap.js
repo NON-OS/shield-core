@@ -39,9 +39,7 @@ function form(p) {
   const slippage = h(
     "select",
     { id: "slippage" },
-    [50, 100, 300].map((bps) =>
-      h("option", { value: String(bps) }, `${bps / 100}.${(bps % 100) / 10}%`),
-    ),
+    [50, 100, 300].map((bps) => h("option", { value: String(bps) }, `${bps / 100}%`)),
   );
   slippage.value = String(p.slippage ?? 50);
   const keep = () => ({
