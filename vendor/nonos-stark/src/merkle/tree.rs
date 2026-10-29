@@ -6,7 +6,7 @@
 use super::super::field::{Fp, Fp2};
 use super::hash::{hash_leaf, hash_leaf_ext, hash_leaf_group, hash_leaf_pair, hash_leaf_wide};
 use super::super::fri::FOLD;
-use super::hash::{hash_leaf_wide_periodic, hash_node, hash_node2};
+use super::hash::{hash_leaf_ext2, hash_leaf_group2, hash_leaf_wide_periodic, hash_node, hash_node2};
 use alloc::vec::Vec;
 
 /// A committed binary Merkle tree over field-element leaves. The leaf count is
@@ -34,7 +34,16 @@ impl MerkleTree {
     /// Same tree structure and node hashing as `commit`; only the leaf hash
     /// differs, so paths open identically via `verify_path_ext`.
     pub fn commit_ext(leaves: &[Fp2]) -> MerkleTree {
-        let mut level: Vec<[u8; 32]> = crate::par::map_slice(leaves, |l| hash_leaf_ext(*l));
+        // Two leaves at a time, so a build with a two-way sponge hashes both in
+        // one permutation; each digest is its own leaf's.
+        let mut level = alloc::vec![[0u8; 32]; leaves.len()];
+        crate::par::for_each_chunk_mut_indexed(&mut level, 2, |i, out| {
+            if let [x, y] = out {
+                (*x, *y) = hash_leaf_ext2(leaves[i], leaves[i + 1]);
+            } else {
+                out[0] = hash_leaf_ext(leaves[i]);
+            }
+        });
         if level.is_empty() {
             level.push(hash_leaf_ext(Fp2::ZERO));
         }
@@ -52,9 +61,14 @@ impl MerkleTree {
     pub fn commit_groups(leaves: &[Fp2]) -> MerkleTree {
         let q = leaves.len() / FOLD;
         let zero = [Fp2::ZERO; FOLD];
-        let mut level: Vec<[u8; 32]> = crate::par::map_index(q, |i| {
-            let group: [Fp2; FOLD] = core::array::from_fn(|j| leaves[i + j * q]);
-            hash_leaf_group(&group)
+        let group = |i: usize| -> [Fp2; FOLD] { core::array::from_fn(|j| leaves[i + j * q]) };
+        let mut level = alloc::vec![[0u8; 32]; q];
+        crate::par::for_each_chunk_mut_indexed(&mut level, 2, |i, out| {
+            if let [x, y] = out {
+                (*x, *y) = hash_leaf_group2(&group(i), &group(i + 1));
+            } else {
+                out[0] = hash_leaf_group(&group(i));
+            }
         });
         if level.is_empty() {
             level.push(hash_leaf_group(&zero));

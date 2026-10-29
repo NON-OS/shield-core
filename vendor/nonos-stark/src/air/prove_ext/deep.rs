@@ -10,7 +10,8 @@
 use super::super::super::field::{Fp, Fp2};
 use super::super::super::poly::batch_inv;
 use super::compose::BLOCK;
-use super::coset::extend;
+use super::super::super::poly::lde_from_coeffs;
+use super::commit::COSET_BATCH;
 use super::setup::Domain;
 use alloc::vec::Vec;
 
@@ -36,11 +37,22 @@ pub(in crate::air) fn over_domain(
     let e = deep_coeffs[d.width * d.window];
 
     let mut deep_d = alloc::vec![Fp2::ZERO; d.n];
-    for c in 0..d.blowup {
-        let cols = extend(trace, d, c);
-        let shift_c = d.coset_shift(c);
-        let blocks = d.t.div_ceil(BLOCK);
-        let parts = crate::par::map_index(blocks, |b| {
+    // Cosets a batch at a time, as the trace commitment goes: one map over
+    // every column of every coset in the batch, then one over every block.
+    let w = trace.len();
+    let batch = COSET_BATCH.min(d.blowup).max(1);
+    let blocks = d.t.div_ceil(BLOCK);
+    for c0 in (0..d.blowup).step_by(batch) {
+        let nc = batch.min(d.blowup - c0);
+        let ext: Vec<Vec<Fp>> = crate::par::map_index(nc * w, |k| {
+            let (ci, j) = (k / w, k % w);
+            lde_from_coeffs(&trace[j], d.coset_shift(c0 + ci), d.sub, d.t)
+        });
+        let parts = crate::par::map_index(nc * blocks, |k| {
+            let (ci, b) = (k / blocks, k % blocks);
+            let c = c0 + ci;
+            let cols = &ext[ci * w..(ci + 1) * w];
+            let shift_c = d.coset_shift(c);
             let (lo, hi) = (b * BLOCK, ((b + 1) * BLOCK).min(d.t));
             // Every denominator in the block at once: window + 1 of them per
             // point, one field inversion for all of them together.
@@ -76,9 +88,10 @@ pub(in crate::air) fn over_domain(
             }
             out
         });
-        for (b, part) in parts.into_iter().enumerate() {
-            for (k, v) in part.into_iter().enumerate() {
-                deep_d[c + d.blowup * (b * BLOCK + k)] = v;
+        for (k, part) in parts.into_iter().enumerate() {
+            let (ci, b) = (k / blocks, k % blocks);
+            for (r, v) in part.into_iter().enumerate() {
+                deep_d[c0 + ci + d.blowup * (b * BLOCK + r)] = v;
             }
         }
     }

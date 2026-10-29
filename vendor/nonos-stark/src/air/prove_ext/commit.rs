@@ -10,7 +10,7 @@
 use super::super::super::field::Fp;
 use super::super::super::merkle::{hash_leaf_wide, hash_leaf_wide2, hash_leaf_wide_at};
 use super::super::super::merkle::MerkleTree;
-use super::coset::extend;
+use super::super::super::poly::lde_from_coeffs;
 use super::setup::Domain;
 use alloc::vec::Vec;
 
@@ -35,27 +35,49 @@ use alloc::vec::Vec;
 /// a short trace length put the two within 12 per cent of each other, which
 /// is what a working set that fits in cache will tell you.
 pub(in crate::air) fn wide_streamed(coeffs: &[Vec<Fp>], d: &Domain) -> MerkleTree {
+    let w = coeffs.len();
     let mut digests = alloc::vec![[0u8; 32]; d.n];
-    for c in 0..d.blowup {
-        let cols = extend(coeffs, d, c);
+    /*
+     * Cosets go a batch at a time. The launch domain is a thousand cosets of
+     * a few thousand rows, and one at a time each was two waits for every
+     * core over a few dozen columns: most of a ten-core machine idle, and in
+     * a browser, where a wait is a round trip through the workers, more so.
+     * A batch is one map over every column of every coset in it, then one
+     * over every row. Each coset's rows and digests are what they were.
+     */
+    let batch = COSET_BATCH.min(d.blowup).max(1);
+    for c0 in (0..d.blowup).step_by(batch) {
+        let nc = batch.min(d.blowup - c0);
+        let ext: Vec<Vec<Fp>> = crate::par::map_index(nc * w, |k| {
+            let (ci, j) = (k / w, k % w);
+            lde_from_coeffs(&coeffs[j], d.coset_shift(c0 + ci), d.sub, d.t)
+        });
         // Rows two at a time, read from the columns in place, so a build with a
         // two-way sponge hashes both in one permutation and no row is gathered
-        // into a vector first. Each digest is its own row's.
-        let mut hashed = alloc::vec![[0u8; 32]; d.t];
+        // into a vector first. A coset's row count is even, so a pair never
+        // spans two cosets.
+        let mut hashed = alloc::vec![[0u8; 32]; nc * d.t];
         crate::par::for_each_chunk_mut_indexed(&mut hashed, 2, |i, out| {
+            let (ci, r) = (i / d.t, i % d.t);
+            let cols = &ext[ci * w..(ci + 1) * w];
             if let [x, y] = out {
-                (*x, *y) = hash_leaf_wide2(&cols, i, i + 1);
+                (*x, *y) = hash_leaf_wide2(cols, r, r + 1);
             } else {
-                out[0] = hash_leaf_wide_at(&cols, i);
+                out[0] = hash_leaf_wide_at(cols, r);
             }
         });
         for (i, h) in hashed.into_iter().enumerate() {
-            digests[c + d.blowup * i] = h;
+            let (ci, r) = (i / d.t, i % d.t);
+            digests[c0 + ci + d.blowup * r] = h;
         }
     }
     let pad = alloc::vec![Fp::ZERO; coeffs.len()];
     MerkleTree::from_leaf_digests(digests, hash_leaf_wide(&pad))
 }
+
+/// Cosets extended and hashed together. Sixteen of the launch domain's hold
+/// a few tens of megabytes, against the gigabyte a proof peaks at.
+pub(super) const COSET_BATCH: usize = 16;
 
 /// Interpolate a range of the trace's columns.
 ///

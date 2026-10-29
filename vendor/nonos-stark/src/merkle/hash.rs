@@ -202,6 +202,46 @@ pub(super) fn hash_node2(a: (&[u8; 32], &[u8; 32]), b: (&[u8; 32], &[u8; 32])) -
     (hash_node(a.0, a.1), hash_node(b.0, b.1))
 }
 
+/// `hash_leaf_ext` of two values.
+#[cfg(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel"))]
+pub(super) fn hash_leaf_ext2(a: Fp2, b: Fp2) -> ([u8; 32], [u8; 32]) {
+    let mut k = crate::hash::keccak_wasm::Keccak2::new();
+    k.update(DOM_LEAF_EXT, DOM_LEAF_EXT);
+    k.update(&a.c0.value().to_le_bytes(), &b.c0.value().to_le_bytes());
+    k.update(&a.c1.value().to_le_bytes(), &b.c1.value().to_le_bytes());
+    digest2(k)
+}
+
+#[cfg(not(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel")))]
+pub(super) fn hash_leaf_ext2(a: Fp2, b: Fp2) -> ([u8; 32], [u8; 32]) {
+    (hash_leaf_ext(a), hash_leaf_ext(b))
+}
+
+/// `hash_leaf_group` of two groups of the same size.
+#[cfg(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel"))]
+pub(super) fn hash_leaf_group2(a: &[Fp2], b: &[Fp2]) -> ([u8; 32], [u8; 32]) {
+    let mut k = crate::hash::keccak_wasm::Keccak2::new();
+    match a.len() {
+        4 => k.update(DOM_LEAF_QUAD, DOM_LEAF_QUAD),
+        8 => k.update(DOM_LEAF_OCT, DOM_LEAF_OCT),
+        n => {
+            k.update(DOM_LEAF_GROUP, DOM_LEAF_GROUP);
+            let len = (n as u32).to_le_bytes();
+            k.update(&len, &len);
+        }
+    }
+    for (x, y) in a.iter().zip(b) {
+        k.update(&x.c0.value().to_le_bytes(), &y.c0.value().to_le_bytes());
+        k.update(&x.c1.value().to_le_bytes(), &y.c1.value().to_le_bytes());
+    }
+    digest2(k)
+}
+
+#[cfg(not(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel")))]
+pub(super) fn hash_leaf_group2(a: &[Fp2], b: &[Fp2]) -> ([u8; 32], [u8; 32]) {
+    (hash_leaf_group(a), hash_leaf_group(b))
+}
+
 /// `hash_leaf_wide` of rows `a` and `b` of `cols`, read from the columns in
 /// place, so no row is gathered into a vector of its own first.
 #[cfg(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel"))]
