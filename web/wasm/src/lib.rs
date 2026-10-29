@@ -21,7 +21,7 @@ mod views;
 mod wallet;
 
 pub use endpoints::endpoint_hosts;
-pub use commit::{commit_reference, use_gpu_committer};
+pub use commit::{commit_reference, coset_root, deep_reference, ext_reference, use_gpu_committer};
 pub use grind::{grind_reference, use_gpu_grinder};
 #[cfg(feature = "panic-report")]
 pub use panic_report::report_panics;

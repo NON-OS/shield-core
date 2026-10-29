@@ -22,7 +22,7 @@ const power = (b, e) => {
   return r;
 };
 
-export async function startGpuGrind({ core, threads, force = false }) {
+export async function startGpuGrind({ core, threads, force = false, big = false }) {
   if (typeof navigator === "undefined" || !navigator.gpu || threads < 1) return null;
   // The flag the prover thread waits on, the request it waits for, and the answer: a nonce and
   // whether there is one.
@@ -106,11 +106,58 @@ export async function startGpuGrind({ core, threads, force = false }) {
   const got = commit(job.coeffs, 3, 40, job.shifts, job.twiddles, t, 16, 3);
   const committing =
     Boolean(got) && got.length === want.length && got.every((x, i) => x === want[i]);
+  // The composition tree and the DEEP pass move a few hundred megabytes each way, so they go to
+  // the GPU only on a computer. Their values go to the GPU's worker as views of the wasm memory,
+  // which is shared already, so they are not copied on the way.
+  const extTree = (values, cut) => {
+    const result = new SharedArrayBuffer((2 * ((values.length / 4) >> cut) - 1) * 8 * 4);
+    return ask({ op: "ext", job: { values, cut }, out: result })
+      ? new Uint32Array(result).slice()
+      : null;
+  };
+  const deep = (coeffs, w, len, shifts, twiddles, powers, t, blowup, comp, consts, window, out) => {
+    const result = new SharedArrayBuffer(out.byteLength);
+    const job = { coeffs, w, len, shifts, twiddles, powers, t, blowup, comp, consts, window };
+    if (!ask({ op: "deep", job, out: result })) return false;
+    out.set(new Uint32Array(result));
+    return true;
+  };
+  let bigOk = false;
+  if (big) {
+    const testValues = pack(Array.from({ length: 2 * 256 }, next));
+    const extWant = core.ext_reference(testValues, 6);
+    const extGot = extTree(testValues, 6);
+    const extOk =
+      Boolean(extGot) &&
+      extGot.length === extWant.length &&
+      extGot.every((x, i) => x === extWant[i]);
+    // A DEEP pass over 16 cosets of 16 points, window 2: six combined polynomials.
+    const [rlo, rhi] = core.coset_root(4);
+    const root = BigInt(rlo) | (BigInt(rhi) << 32n);
+    const dj = {
+      coeffs: pack(Array.from({ length: 6 * 40 }, next)),
+      shifts: pack(Array.from({ length: 16 }, next)),
+      comp: pack(Array.from({ length: 2 * 256 }, next)),
+      consts: pack(Array.from({ length: 2 * 8 }, next)),
+    };
+    const deepWant = core.deep_reference(dj.coeffs, 6, 40, dj.shifts, 4, 16, dj.comp, dj.consts, 2);
+    const deepGot = new Uint32Array(deepWant.length);
+    const twiddles = pack(Array.from({ length: 8 }, (_, k) => power(root, BigInt(k))));
+    const powers = pack(Array.from({ length: 16 }, (_, k) => power(root, BigInt(k))));
+    const deepOk =
+      deep(dj.coeffs, 6, 40, dj.shifts, twiddles, powers, 16, 16, dj.comp, dj.consts, 2, deepGot) &&
+      deepGot.every((x, i) => x === deepWant[i]);
+    bigOk = extOk && deepOk;
+  }
   if (committing) {
     self.shieldCommit = commit;
-    core.use_gpu_committer(true);
+    if (bigOk) {
+      self.shieldExtTree = extTree;
+      self.shieldDeep = deep;
+    }
+    core.use_gpu_committer(true, bigOk);
   }
-  return { gpuRate: ready.rate, cpuRate, committing };
+  return { gpuRate: ready.rate, cpuRate, committing, big: bigOk };
 }
 
 function stop(worker) {

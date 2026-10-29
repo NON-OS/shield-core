@@ -7,7 +7,8 @@
 //! consumed, so the sidecar is bound rather than trusted.
 
 use super::super::super::field::{Fp, Fp2};
-use super::super::prove_ext::{batch_inv, extend, Domain, BLOCK};
+use super::super::super::poly::lde_from_coeffs;
+use super::super::prove_ext::{batch_inv, Domain, BLOCK, COSET_BATCH};
 use alloc::vec::Vec;
 
 /// The preprocessed DEEP polynomial: the trace and composition quotients of the
@@ -83,12 +84,49 @@ pub(in crate::air) fn over_domain(
     combined.push(pim);
     let window = d.window;
 
+    if crate::committer::deep_active() {
+        let shifts: Vec<Fp> = (0..d.blowup).map(|c| d.coset_shift(c)).collect();
+        let job = crate::committer::DeepJob {
+            combined: &combined,
+            shifts: &shifts,
+            sub: d.sub,
+            t: d.t,
+            blowup: d.blowup,
+            comp: comp_d,
+            zks: &zks,
+            z,
+            claims: &claim_sums,
+            e,
+            comp_z,
+            periodic_claim: periodic_claim_sum,
+        };
+        if let Some(values) = crate::committer::deep_values(&job) {
+            return values;
+        }
+    }
+
     let mut deep_d = alloc::vec![Fp2::ZERO; d.n];
-    for c in 0..d.blowup {
-        let ev = extend(&combined, d, c);
-        let shift_c = d.coset_shift(c);
-        let blocks = d.t.div_ceil(BLOCK);
-        let parts = crate::par::map_index(blocks, |b| {
+    /*
+     * Cosets a batch at a time. Each coset extends only the 2 (window + 1)
+     * combined polynomials, six at the launch shape, so one at a time kept at
+     * most six cores busy and made every core wait twice a coset. A batch is
+     * one map over every polynomial of every coset in it, then one over every
+     * block. The values are the same.
+     */
+    let w = combined.len();
+    let batch = COSET_BATCH.min(d.blowup).max(1);
+    let blocks = d.t.div_ceil(BLOCK);
+    for c0 in (0..d.blowup).step_by(batch) {
+        let nc = batch.min(d.blowup - c0);
+        let ev: Vec<Vec<Fp>> = crate::par::map_index(nc * w, |k| {
+            let (ci, j) = (k / w, k % w);
+            lde_from_coeffs(&combined[j], d.coset_shift(c0 + ci), d.sub, d.t)
+        });
+        let parts = crate::par::map_index(nc * blocks, |k| {
+            let (ci, b) = (k / blocks, k % blocks);
+            let c = c0 + ci;
+            let ev = &ev[ci * w..(ci + 1) * w];
+            let shift_c = d.coset_shift(c);
             let (lo, hi) = (b * BLOCK, ((b + 1) * BLOCK).min(d.t));
             // Every denominator in the block at once; the (x - z) inverse is
             // shared by the composition and every periodic quotient.
@@ -124,9 +162,10 @@ pub(in crate::air) fn over_domain(
             }
             out
         });
-        for (b, part) in parts.into_iter().enumerate() {
-            for (k, v) in part.into_iter().enumerate() {
-                deep_d[c + d.blowup * (b * BLOCK + k)] = v;
+        for (k, part) in parts.into_iter().enumerate() {
+            let (ci, b) = (k / blocks, k % blocks);
+            for (r, v) in part.into_iter().enumerate() {
+                deep_d[c0 + ci + d.blowup * (b * BLOCK + r)] = v;
             }
         }
     }

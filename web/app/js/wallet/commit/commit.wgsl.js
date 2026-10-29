@@ -5,6 +5,8 @@
 
 import { FIELD_WGSL } from "./field.wgsl.js";
 import { KECCAK_F_WGSL } from "./keccak.wgsl.js";
+import { NODE_WGSL } from "./node.wgsl.js";
+import { NTT_WGSL, PARAMS_WGSL } from "./ntt.wgsl.js";
 
 const words = (s) => {
   const bytes = new TextEncoder().encode(s);
@@ -15,30 +17,10 @@ const words = (s) => {
   return out;
 };
 const LEAF_TAG = words("NONOS-STARK-MERKLE-LEAF-WIDE");
-const NODE_TAG = Array.from(new TextEncoder().encode("NONOS-STARK-MERKLE-NODE"));
 const list = (xs) => xs.map((x) => `${x}u`).join(", ");
 
 // prettier-ignore
-export const COMMIT_WGSL = FIELD_WGSL + KECCAK_F_WGSL + `
-struct Params {
-  w: u32,
-  len_coeffs: u32,
-  t: u32,
-  log_t: u32,
-  blowup: u32,
-  batch: u32,
-  c0: u32,
-  len: u32,
-  half: u32,
-  step: u32,
-  in_off: u32,
-  out_off: u32,
-  count: u32,
-  _a: u32,
-  _b: u32,
-  _c: u32,
-}
-
+export const COMMIT_WGSL = FIELD_WGSL + KECCAK_F_WGSL + NODE_WGSL + PARAMS_WGSL + `
 @group(0) @binding(0) var<storage, read> coeffs: array<vec2<u32>>;
 @group(0) @binding(1) var<storage, read> shifts: array<vec2<u32>>;
 @group(0) @binding(2) var<storage, read> twiddles: array<vec2<u32>>;
@@ -47,70 +29,8 @@ struct Params {
 @group(0) @binding(5) var<uniform> pr: Params;
 
 const LEAF_TAG = array<u32, ${LEAF_TAG.length}>(${list(LEAF_TAG)});
-const NODE_TAG = array<u32, ${NODE_TAG.length}>(${list(NODE_TAG)});
 
-fn fpow(b: vec2<u32>, e: u32) -> vec2<u32> {
-  var r = vec2<u32>(1u, 0u);
-  var x = b;
-  var k = e;
-  while (k != 0u) {
-    if ((k & 1u) != 0u) {
-      r = fmul(r, x);
-    }
-    x = fmul(x, x);
-    k = k >> 1u;
-  }
-  return r;
-}
-
-fn flat(id: vec3<u32>, groups: vec3<u32>) -> u32 {
-  return id.x + id.y * groups.x * 64u;
-}
-
-// Coefficient j of each column lands on residue j mod t with weight shift^j, so one transform
-// of size t evaluates the polynomial on the coset. Written in bit-reversed order for the stages.
-@compute @workgroup_size(64)
-fn fold(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
-  let idx = flat(id, groups);
-  if (idx >= pr.batch * pr.w * pr.t) {
-    return;
-  }
-  let k = idx % pr.t;
-  let col = (idx / pr.t) % pr.w;
-  let ci = idx / (pr.t * pr.w);
-  let shift = shifts[pr.c0 + ci];
-  let step = fpow(shift, pr.t);
-  var weight = fpow(shift, k);
-  var acc = vec2<u32>(0u, 0u);
-  var j = k;
-  while (j < pr.len_coeffs) {
-    acc = fadd(acc, fmul(coeffs[col * pr.len_coeffs + j], weight));
-    weight = fmul(weight, step);
-    j += pr.t;
-  }
-  let rev = reverseBits(k) >> (32u - pr.log_t);
-  work[(ci * pr.w + col) * pr.t + rev] = acc;
-}
-
-// One radix-2 stage across every transform in the batch.
-@compute @workgroup_size(64)
-fn stage(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
-  let idx = flat(id, groups);
-  let pairs = pr.t / 2u;
-  if (idx >= pr.batch * pr.w * pairs) {
-    return;
-  }
-  let which = idx / pairs;
-  let p = idx % pairs;
-  let block = p / pr.half;
-  let j = p % pr.half;
-  let s = which * pr.t + block * pr.len + j;
-  let u = work[s];
-  let v = fmul(work[s + pr.half], twiddles[j * pr.step]);
-  work[s] = fadd(u, v);
-  work[s + pr.half] = fsub(u, v);
-}
-
+` + NTT_WGSL + `
 fn leaf(ci: u32, row: u32) -> array<u32, 8> {
   var st: array<vec2<u32>, 25>;
   let n_words = ${LEAF_TAG.length}u + 2u * pr.w;
@@ -141,44 +61,6 @@ fn leaf(ci: u32, row: u32) -> array<u32, 8> {
     }
     keccak_f(&st);
   }
-  return array<u32, 8>(st[0].x, st[0].y, st[1].x, st[1].y, st[2].x, st[2].y, st[3].x, st[3].y);
-}
-
-fn node_byte(k: u32, l: array<u32, 8>, r: array<u32, 8>) -> u32 {
-  if (k < 23u) {
-    return NODE_TAG[k];
-  }
-  if (k < 55u) {
-    let b = k - 23u;
-    return (l[b / 4u] >> (8u * (b % 4u))) & 0xffu;
-  }
-  if (k < 87u) {
-    let b = k - 55u;
-    return (r[b / 4u] >> (8u * (b % 4u))) & 0xffu;
-  }
-  if (k == 87u) {
-    return 1u;
-  }
-  return 0u;
-}
-
-fn node(l: array<u32, 8>, r: array<u32, 8>) -> array<u32, 8> {
-  var st: array<vec2<u32>, 25>;
-  for (var wi = 0u; wi < 34u; wi++) {
-    var v = 0u;
-    for (var bb = 0u; bb < 4u; bb++) {
-      v |= node_byte(wi * 4u + bb, l, r) << (8u * bb);
-    }
-    if (wi == 33u) {
-      v |= 0x80000000u;
-    }
-    if ((wi & 1u) == 0u) {
-      st[wi / 2u].x ^= v;
-    } else {
-      st[wi / 2u].y ^= v;
-    }
-  }
-  keccak_f(&st);
   return array<u32, 8>(st[0].x, st[0].y, st[1].x, st[1].y, st[2].x, st[2].y, st[3].x, st[3].y);
 }
 

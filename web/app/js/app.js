@@ -16,6 +16,7 @@ import { watchScan } from "./state/scan.js";
 import { Tunnel } from "./route/tunnel.js";
 import { bridge } from "./route/bridge.js";
 import { loadPace, mark } from "./state/proof-progress.js";
+import { handheld } from "./device/form.js";
 
 const root = document.querySelector("main");
 
@@ -61,6 +62,8 @@ async function boot() {
     cache: cache ?? new Uint8Array(),
     // ?gpu=off grinds on the cores alone; ?gpu=force uses any GPU, for testing.
     gpu: new URLSearchParams(location.search).get("gpu"),
+    // The GPU passes that move hundreds of megabytes run only on a computer.
+    big: !handheld(),
   });
   watchIdle();
   watchScan();

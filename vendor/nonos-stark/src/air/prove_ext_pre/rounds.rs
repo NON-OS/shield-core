@@ -279,7 +279,7 @@ fn prove_rounds<A: AirExt + Permuted>(
     if !phase("composition") {
         return None;
     }
-    let comp_top = TreeTop::of(&MerkleTree::commit_ext(&comp_d), COMP_CUT)?;
+    let comp_top = crate::committer::ext_top(&comp_d, COMP_CUT)?;
     let comp_root = comp_top.root();
     transcript.absorb_digest(&comp_root);
     if !phase("composition tree") {

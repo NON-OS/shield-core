@@ -4,6 +4,8 @@
 
 import { KECCAK_WGSL } from "./keccak.wgsl.js";
 import { commitPipelines, gpuCommit } from "../commit/gpu-commit.js";
+import { extPipelines, gpuExtTree } from "../commit/gpu-ext.js";
+import { deepPipelines, gpuDeep } from "../commit/gpu-deep.js";
 
 const GROUP = 64;
 const PER = 16;
@@ -35,11 +37,15 @@ async function setup() {
     layout: pipeline.getBindGroupLayout(0),
     entries: [template, params, found].map((b, i) => ({ binding: i, resource: { buffer: b } })),
   });
-  const commit = await commitPipelines(device);
+  const [commit, ext, deep] = await Promise.all([
+    commitPipelines(device),
+    extPipelines(device),
+    deepPipelines(device),
+  ]);
   const info = adapter.info ?? {};
   const software =
     adapter.isFallbackAdapter || /swiftshader|llvmpipe/i.test(info.description ?? "");
-  return { device, pipeline, template, params, found, read, bind, software, commit };
+  return { device, pipeline, template, params, found, read, bind, software, commit, ext, deep };
 }
 
 // One block of nonces from `base`: the smallest offset meeting the work, or NONE.
@@ -112,6 +118,24 @@ onmessage = async ({ data }) => {
   if (data.op === "commit") {
     try {
       new Uint32Array(data.out).set(await gpuCommit(gpu.commit, data.job));
+      answer(data.id, 0, 1);
+    } catch {
+      answer(data.id, 0, 0);
+    }
+    return;
+  }
+  if (data.op === "deep") {
+    try {
+      await gpuDeep(gpu.deep, data.job, data.out);
+      answer(data.id, 0, 1);
+    } catch {
+      answer(data.id, 0, 0);
+    }
+    return;
+  }
+  if (data.op === "ext") {
+    try {
+      new Uint32Array(data.out).set(await gpuExtTree(gpu.ext, data.job));
       answer(data.id, 0, 1);
     } catch {
       answer(data.id, 0, 0);

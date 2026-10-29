@@ -96,7 +96,7 @@ pub(in crate::air) fn wide_top(coeffs: &[Vec<Fp>], d: &Domain, cut: usize) -> Op
 
 /// Cosets extended and hashed together. Sixteen of the launch domain's hold
 /// a few tens of megabytes, against the gigabyte a proof peaks at.
-pub(super) const COSET_BATCH: usize = 16;
+pub(in crate::air) const COSET_BATCH: usize = 16;
 
 /// Interpolate a range of the trace's columns.
 ///

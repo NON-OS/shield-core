@@ -33,7 +33,7 @@ async function persist() {
   await store.apply(changes);
 }
 
-async function start({ threads, cache: top, port, gpu }) {
+async function start({ threads, cache: top, port, gpu, big }) {
   requests = syncRequest(port, XMLHttpRequest);
   self.XMLHttpRequest = requests.Request;
   memory = (await init()).memory;
@@ -42,7 +42,7 @@ async function start({ threads, cache: top, port, gpu }) {
   // The grind on the GPU where it is faster and agrees with the cores; the cores otherwise.
   grind =
     threads > 0 && gpu !== "off"
-      ? await startGpuGrind({ core, threads, force: gpu === "force" }).catch(() => null)
+      ? await startGpuGrind({ core, threads, force: gpu === "force", big }).catch(() => null)
       : null;
   store = await openStore();
   for (const [path, bytes] of await store.files()) core.load_file(path, bytes);
@@ -74,6 +74,7 @@ async function time() {
     seconds,
     gpu: Boolean(grind),
     gpuCommit: Boolean(grind?.committing),
+    gpuBig: Boolean(grind?.big),
     wasmBytes: memory.buffer.byteLength,
     point,
     proof,
