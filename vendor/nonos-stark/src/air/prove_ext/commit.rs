@@ -9,7 +9,7 @@
 
 use super::super::super::field::Fp;
 use super::super::super::merkle::{hash_leaf_wide, hash_leaf_wide2, hash_leaf_wide_at};
-use super::super::super::merkle::MerkleTree;
+use super::super::super::merkle::{MerkleTree, TreeTop};
 use super::super::super::poly::lde_from_coeffs;
 use super::setup::Domain;
 use alloc::vec::Vec;
@@ -73,6 +73,25 @@ pub(in crate::air) fn wide_streamed(coeffs: &[Vec<Fp>], d: &Domain) -> MerkleTre
     }
     let pad = alloc::vec![Fp::ZERO; coeffs.len()];
     MerkleTree::from_leaf_digests(digests, hash_leaf_wide(&pad))
+}
+
+/// The wide commitment's tree from `cut` up: from a supplied committer when
+/// there is one and its tree passes the checks, else streamed here.
+pub(in crate::air) fn wide_top(coeffs: &[Vec<Fp>], d: &Domain, cut: usize) -> Option<TreeTop> {
+    if crate::committer::active() {
+        let shifts: Vec<Fp> = (0..d.blowup).map(|c| d.coset_shift(c)).collect();
+        let mut twiddles = Vec::with_capacity(d.t / 2);
+        let mut w = Fp::ONE;
+        for _ in 0..d.t / 2 {
+            twiddles.push(w);
+            w = w * d.sub;
+        }
+        let job = crate::committer::WideCommit { coeffs, shifts: &shifts, twiddles: &twiddles, t: d.t, blowup: d.blowup, cut };
+        if let Some(top) = crate::committer::supplied(&job) {
+            return Some(top);
+        }
+    }
+    TreeTop::of(&wide_streamed(coeffs, d), cut)
 }
 
 /// Cosets extended and hashed together. Sixteen of the launch domain's hold

@@ -18,7 +18,7 @@ mod run;
 mod setup;
 
 pub(in crate::air) use crate::poly::batch_inv;
-pub(in crate::air) use commit::{trace_coeffs_cols, wide_streamed};
+pub(in crate::air) use commit::{trace_coeffs_cols, wide_streamed, wide_top};
 pub(in crate::air) use compose::{over_domain, BLOCK};
 pub(in crate::air) use coset::{extend, periodic_coeffs, trace_coeffs};
 pub(in crate::air) use deep::over_domain as deep_over_domain;

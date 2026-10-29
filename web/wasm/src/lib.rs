@@ -7,6 +7,7 @@
 //! the phones run.
 
 mod calls;
+mod commit;
 mod endpoints;
 mod grind;
 mod guard;
@@ -20,6 +21,7 @@ mod views;
 mod wallet;
 
 pub use endpoints::endpoint_hosts;
+pub use commit::{commit_reference, use_gpu_committer};
 pub use grind::{grind_reference, use_gpu_grinder};
 #[cfg(feature = "panic-report")]
 pub use panic_report::report_panics;

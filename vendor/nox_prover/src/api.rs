@@ -340,6 +340,25 @@ pub(crate) fn prove_inner(
     top: Option<&TreeTop>,
     opts: &Options<'_>,
 ) -> Result<(Proof, Vec<u8>), Error> {
+    use stark_proofs::crypto::stark::committer;
+    match prove_once(request, seed, entropy, top, opts) {
+        // A supplied commitment passed its checks and the proof still did not
+        // verify: prove again with every commitment made here.
+        Err(Error::NotVerified(_)) if committer::active() => {
+            committer::clear_committer();
+            prove_once(request, seed, entropy, top, opts)
+        }
+        done => done,
+    }
+}
+
+fn prove_once(
+    request: &str,
+    seed: &str,
+    entropy: &[u8],
+    top: Option<&TreeTop>,
+    opts: &Options<'_>,
+) -> Result<(Proof, Vec<u8>), Error> {
     let weakened = policy::check(request, &policy::own_keys(seed)).map_err(Error::Policy)?;
     let (q, grind, extra) = (
         direct::N_QUERIES,

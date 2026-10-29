@@ -3,6 +3,7 @@
 // and writes the smallest nonce found. The prover checks that nonce before it uses it.
 
 import { KECCAK_WGSL } from "./keccak.wgsl.js";
+import { commitPipelines, gpuCommit } from "../commit/gpu-commit.js";
 
 const GROUP = 64;
 const PER = 16;
@@ -34,10 +35,11 @@ async function setup() {
     layout: pipeline.getBindGroupLayout(0),
     entries: [template, params, found].map((b, i) => ({ binding: i, resource: { buffer: b } })),
   });
+  const commit = await commitPipelines(device);
   const info = adapter.info ?? {};
   const software =
     adapter.isFallbackAdapter || /swiftshader|llvmpipe/i.test(info.description ?? "");
-  return { device, pipeline, template, params, found, read, bind, software };
+  return { device, pipeline, template, params, found, read, bind, software, commit };
 }
 
 // One block of nonces from `base`: the smallest offset meeting the work, or NONE.
@@ -82,6 +84,17 @@ async function rate(g) {
   return size(GROUPS) / ((performance.now() - start) / 1000);
 }
 
+// The answer to request `id`, unless the prover thread gave up waiting for it.
+function answer(id, nonce, ok) {
+  const ctl = new Int32Array(shared, 0, 2);
+  if (Atomics.load(ctl, 1) !== id) return;
+  const out = new Uint32Array(shared, 8, 2);
+  out[0] = nonce;
+  out[1] = ok;
+  Atomics.store(ctl, 0, 2);
+  Atomics.notify(ctl, 0);
+}
+
 onmessage = async ({ data }) => {
   if (data.op === "setup") {
     try {
@@ -96,17 +109,21 @@ onmessage = async ({ data }) => {
     }
     return;
   }
+  if (data.op === "commit") {
+    try {
+      new Uint32Array(data.out).set(await gpuCommit(gpu.commit, data.job));
+      answer(data.id, 0, 1);
+    } catch {
+      answer(data.id, 0, 0);
+    }
+    return;
+  }
   if (data.op === "search") {
-    const ctl = new Int32Array(shared, 0, 1);
-    const out = new Uint32Array(shared, 4, 2);
     try {
       const n = await search(gpu, data.lanes, data.bits);
-      out[0] = n < 0 ? 0 : n;
-      out[1] = n < 0 ? 0 : 1;
+      answer(data.id, n < 0 ? 0 : n, n < 0 ? 0 : 1);
     } catch {
-      out[1] = 0;
+      answer(data.id, 0, 0);
     }
-    Atomics.store(ctl, 0, 2);
-    Atomics.notify(ctl, 0);
   }
 };

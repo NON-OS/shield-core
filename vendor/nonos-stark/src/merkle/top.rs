@@ -32,6 +32,35 @@ impl TreeTop {
         Some(TreeTop { cut, layers: all[cut..].to_vec() })
     }
 
+    /// Levels from `cut` up that someone else built: each level half the one
+    /// below, ending at a single root, with sampled parents rehashed here.
+    pub fn from_layers_checked(cut: usize, layers: Vec<Vec<[u8; 32]>>) -> Option<TreeTop> {
+        let first = layers.first()?.len();
+        if first == 0 || !first.is_power_of_two() || cut > 32 {
+            return None;
+        }
+        let mut expect = first;
+        for layer in &layers {
+            if layer.len() != expect {
+                return None;
+            }
+            expect /= 2;
+        }
+        if layers.last()?.len() != 1 {
+            return None;
+        }
+        for pair in layers.windows(2) {
+            let (below, above) = (&pair[0], &pair[1]);
+            let step = (above.len() / 32).max(1);
+            for k in (0..above.len()).step_by(step) {
+                if hash_node(&below[2 * k], &below[2 * k + 1]) != above[k] {
+                    return None;
+                }
+            }
+        }
+        Some(TreeTop { cut, layers })
+    }
+
     pub fn root(&self) -> [u8; 32] {
         self.layers.last().and_then(|l| l.first()).copied().unwrap_or([0u8; 32])
     }

@@ -20,7 +20,7 @@ use super::super::composition::num_coeffs;
 use super::super::periodic_root::periodic_tree_over;
 use super::super::prove_ext::{
     comp_at_z, draw_ood_point_ext, eval_base, ood_frame, over_domain, periodic_coeffs,
-    trace_coeffs_cols, wide_streamed, Domain,
+    trace_coeffs_cols, wide_top, Domain,
 };
 
 /// Levels of the trace trees kept below their tops: an opening rebuilds
@@ -204,7 +204,7 @@ fn prove_rounds<A: AirExt + Permuted>(
      * the challenges are drawn against.
      */
     let region_c = hide(trace_coeffs_cols(trace, &d, 0, rw), 0);
-    let region_top = TreeTop::of(&wide_streamed(&region_c, &d), TRACE_CUT)?;
+    let region_top = wide_top(&region_c, &d, TRACE_CUT)?;
     let region_root = region_top.root();
     transcript.absorb_digest(&region_root);
     if !phase("region committed") {
@@ -230,7 +230,7 @@ fn prove_rounds<A: AirExt + Permuted>(
      * accumulators the wiring implies.
      */
     let perm_c = hide(trace_coeffs_cols(trace, &d, rw, d.width), rw);
-    let perm_top = TreeTop::of(&wide_streamed(&perm_c, &d), TRACE_CUT)?;
+    let perm_top = wide_top(&perm_c, &d, TRACE_CUT)?;
     let perm_root = perm_top.root();
     transcript.absorb_digest(&perm_root);
     if !phase("products committed") {

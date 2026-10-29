@@ -73,6 +73,7 @@ async function time() {
   return JSON.stringify({
     seconds,
     gpu: Boolean(grind),
+    gpuCommit: Boolean(grind?.committing),
     wasmBytes: memory.buffer.byteLength,
     point,
     proof,
