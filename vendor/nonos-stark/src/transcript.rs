@@ -240,6 +240,9 @@ impl Transcript {
          */
         const BLOCK: u64 = 1 << 20;
         let t = pow_template(0x05, &self.state);
+        if let Some(n) = crate::grinder::supplied(&t, bits) {
+            return n;
+        }
         /*
          * On an arm64 core with the SHA3 instructions, and in a threaded
          * browser build with wasm SIMD, nonces go two to a permutation.

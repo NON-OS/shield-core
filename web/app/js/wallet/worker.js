@@ -9,6 +9,7 @@
 import init, * as core from "../../pkg/nox_shield_web.js";
 import { openStore } from "./store.js";
 import { syncRequest } from "./sync-request.js";
+import { startGpuGrind } from "./grind/client.js";
 
 const DIR = "/shield";
 let wallet = null;
@@ -16,6 +17,7 @@ let store = null;
 let memory = null;
 let cache = null;
 let requests = null;
+let grind = null;
 
 // The prover names each phase as it finishes, from inside the call that holds this thread. Posting
 // is not held up by that call, so the page sees the proof move while it runs.
@@ -31,12 +33,17 @@ async function persist() {
   await store.apply(changes);
 }
 
-async function start({ threads, cache: top, port }) {
+async function start({ threads, cache: top, port, gpu }) {
   requests = syncRequest(port, XMLHttpRequest);
   self.XMLHttpRequest = requests.Request;
   memory = (await init()).memory;
   cache = top;
   if (threads > 0) await core.initThreadPool(threads);
+  // The grind on the GPU where it is faster and agrees with the cores; the cores otherwise.
+  grind =
+    threads > 0 && gpu !== "off"
+      ? await startGpuGrind({ core, threads, force: gpu === "force" }).catch(() => null)
+      : null;
   store = await openStore();
   for (const [path, bytes] of await store.files()) core.load_file(path, bytes);
   // The periodic cache is the same for every wallet. It is loaded, never stored, so storage holds
@@ -65,6 +72,7 @@ async function time() {
       .filter(Boolean) ?? [];
   return JSON.stringify({
     seconds,
+    gpu: Boolean(grind),
     wasmBytes: memory.buffer.byteLength,
     point,
     proof,

@@ -14,6 +14,7 @@
 
 extern crate alloc;
 
+pub mod grinder;
 pub mod hash;
 
 pub mod air;

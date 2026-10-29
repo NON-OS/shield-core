@@ -12,6 +12,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 nox_shield_core = { path = "../../core", default-features = false }
 nox_prover = { workspace = true }
+# The grinder hook only; its features are whatever the prover enables.
+nonos-stark = { path = "../../vendor/nonos-stark" }
 wasm-bindgen = "=0.2.128"
 nonos_seal = { workspace = true }
 getrandom = { workspace = true }

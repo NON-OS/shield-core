@@ -34,8 +34,8 @@ export class Wallet {
   #start() {
     const { port1, port2 } = new MessageChannel();
     this.#route(port2);
-    const { threads, cache } = this.#options;
-    return this.#send({ op: "start", threads, cache: cache.slice(), port: port1 }, [port1]);
+    const { threads, cache, gpu } = this.#options;
+    return this.#send({ op: "start", threads, gpu, cache: cache.slice(), port: port1 }, [port1]);
   }
 
   #send(message, transfer = []) {
@@ -47,8 +47,8 @@ export class Wallet {
   }
 
   /** Start the worker with the shipped periodic cache. Resolves to whether a wallet is stored. */
-  async start({ threads, cache }) {
-    this.#options = { threads, cache };
+  async start({ threads, cache, gpu }) {
+    this.#options = { threads, cache, gpu };
     this.#spawn();
     return this.#start();
   }

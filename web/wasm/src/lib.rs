@@ -8,6 +8,7 @@
 
 mod calls;
 mod endpoints;
+mod grind;
 mod guard;
 mod json;
 #[cfg(feature = "panic-report")]
@@ -19,6 +20,7 @@ mod views;
 mod wallet;
 
 pub use endpoints::endpoint_hosts;
+pub use grind::{grind_reference, use_gpu_grinder};
 #[cfg(feature = "panic-report")]
 pub use panic_report::report_panics;
 pub use periodic_cache::periodic_cache;

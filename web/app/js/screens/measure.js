@@ -95,6 +95,7 @@ export function measure() {
         ["proof", `${r.proofBytes} bytes`],
         ["peak memory", `${Math.round(r.wasmBytes / 2 ** 20)} MiB`],
         ["threads", threads === 1 ? "one" : String(threads)],
+        ["grind", r.gpu ? "on the GPU" : "on the cores"],
         ["queries", `${r.point[0]} at grind ${r.point[1]}`],
       ]),
     ],

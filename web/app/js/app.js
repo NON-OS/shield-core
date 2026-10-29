@@ -59,6 +59,8 @@ async function boot() {
   const stored = await app.wallet.start({
     threads: app.proving.threads,
     cache: cache ?? new Uint8Array(),
+    // ?gpu=off grinds on the cores alone; ?gpu=force uses any GPU, for testing.
+    gpu: new URLSearchParams(location.search).get("gpu"),
   });
   watchIdle();
   watchScan();
