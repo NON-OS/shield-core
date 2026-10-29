@@ -1,6 +1,9 @@
 //! One pass over the pool's history over Tor, in 10,000-block pages, accepted only whole: leaves
-//! `0..nextLeafIndex` at one block, since a short history would show a balance missing notes.
+//! `0..nextLeafIndex` at one block, since a short history would show a balance missing notes. A
+//! pass reads only the blocks after the settled part the last pass kept, and a joined history that
+//! is not whole is read again from the pool's first block.
 
+use super::history_kept::{self, Kept};
 use crate::discovery::{first_gap, note_commitments, Log};
 use crate::error::NetError;
 use crate::net::pool::{ACTIVE, NOTE_COMMITTED, NULLIFIER_SPENT, OUTPUT_NOTE, ROOT_COMMITTED};
@@ -36,6 +39,18 @@ pub fn fetch_history(tor: &Tor, hosts: &[&str]) -> Result<History, NetError> {
 }
 
 fn fetch_from(tor: &Tor, host: &str) -> Result<History, NetError> {
+    let kept = history_kept::kept(host, ACTIVE.address);
+    let joined = kept.is_some();
+    match read_from(tor, host, kept) {
+        Err(NetError::ReplyShape) if joined => {
+            history_kept::forget();
+            read_from(tor, host, None)
+        }
+        read => read,
+    }
+}
+
+fn read_from(tor: &Tor, host: &str, kept: Option<Kept>) -> Result<History, NetError> {
     let head = head_over_tor(tor, host)?;
     let next = calls_at_over_tor(
         tor,
@@ -49,9 +64,14 @@ fn fetch_from(tor: &Tor, host: &str) -> Result<History, NetError> {
     let mut be = [0u8; 8];
     be.copy_from_slice(next_leaf);
     let expected = u64::from_be_bytes(be);
-    let pages =
-        |topic| pages_over_tor(tor, host, ACTIVE.address, topic, ACTIVE.deploy_block, head, WINDOW);
-    let committed = pages(NOTE_COMMITTED)?;
+    let from = kept.as_ref().map_or(ACTIVE.deploy_block, |k| k.upto + 1);
+    let k = kept.unwrap_or_else(Kept::none);
+    let pages = |topic, old: Vec<RawLog>| -> Result<Vec<RawLog>, NetError> {
+        let mut logs = old;
+        logs.extend(pages_over_tor(tor, host, ACTIVE.address, topic, from, head, WINDOW)?);
+        Ok(logs)
+    };
+    let committed = pages(NOTE_COMMITTED, k.committed)?;
     let logs: Vec<Log> =
         committed.iter().map(|r| Log { topics: &r.topics, data: &r.data }).collect();
     let leaves = note_commitments(&logs);
@@ -59,14 +79,16 @@ fn fetch_from(tor: &Tor, host: &str) -> Result<History, NetError> {
     if first_gap(&leaves).is_some() || u64::try_from(leaves.len()).ok() != Some(expected) {
         return Err(NetError::ReplyShape);
     }
-    let roots = pages(ROOT_COMMITTED)?;
+    let roots = pages(ROOT_COMMITTED, k.roots)?;
     let registered = super::registry::registered(tor, host, &roots, head)?;
-    Ok(History {
+    let history = History {
         head,
         committed,
-        outputs: pages(OUTPUT_NOTE)?,
-        nullifiers: pages(NULLIFIER_SPENT)?,
+        outputs: pages(OUTPUT_NOTE, k.outputs)?,
+        nullifiers: pages(NULLIFIER_SPENT, k.nullifiers)?,
         roots,
         registered,
-    })
+    };
+    history_kept::keep(host, ACTIVE.address, &history);
+    Ok(history)
 }

@@ -4,6 +4,7 @@
 use crate::error::NetError;
 
 /// One log: indexed fields as topics, the rest as data, and the block it landed in.
+#[derive(Clone)]
 pub struct RawLog {
     pub topics: Vec<[u8; 32]>,
     pub data: Vec<u8>,

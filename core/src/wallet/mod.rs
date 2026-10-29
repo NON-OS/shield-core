@@ -11,6 +11,7 @@ pub mod deposit_split;
 #[cfg(feature = "fuzzing")]
 pub mod fuzz_hook;
 pub mod handoff;
+mod history_kept;
 mod intent_limits;
 pub(crate) mod intent_rules;
 mod one_call;
