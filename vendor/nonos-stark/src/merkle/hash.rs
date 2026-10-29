@@ -7,6 +7,8 @@
 use super::super::field::{Fp, Fp2};
 use crate::hash::Keccak;
 
+extern crate alloc;
+
 const DOM_LEAF: &[u8] = b"NONOS-STARK-MERKLE-LEAF";
 const DOM_LEAF_EXT: &[u8] = b"NONOS-STARK-MERKLE-LEAF-EXT";
 const DOM_LEAF_PAIR: &[u8] = b"NONOS-STARK-MERKLE-LEAF-PAIR";
@@ -171,6 +173,59 @@ pub(super) fn hash_node(left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
     k.update(DOM_NODE);
     k.update(&left[..DIGEST_BYTES]);
     k.update(&right[..DIGEST_BYTES]);
+    digest(k)
+}
+
+/// Two digests at once, from a two-way sponge where this build has one: the
+/// threaded browser build, with wasm SIMD. Elsewhere the two are hashed one
+/// after the other. Either way each digest is its message's own.
+#[cfg(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel"))]
+fn digest2(k: crate::hash::keccak_wasm::Keccak2) -> ([u8; 32], [u8; 32]) {
+    let (mut a, mut b) = k.finalize32();
+    a[DIGEST_BYTES..].fill(0);
+    b[DIGEST_BYTES..].fill(0);
+    (a, b)
+}
+
+/// `hash_node` of two pairs of children.
+#[cfg(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel"))]
+pub(super) fn hash_node2(a: (&[u8; 32], &[u8; 32]), b: (&[u8; 32], &[u8; 32])) -> ([u8; 32], [u8; 32]) {
+    let mut k = crate::hash::keccak_wasm::Keccak2::new();
+    k.update(DOM_NODE, DOM_NODE);
+    k.update(&a.0[..DIGEST_BYTES], &b.0[..DIGEST_BYTES]);
+    k.update(&a.1[..DIGEST_BYTES], &b.1[..DIGEST_BYTES]);
+    digest2(k)
+}
+
+#[cfg(not(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel")))]
+pub(super) fn hash_node2(a: (&[u8; 32], &[u8; 32]), b: (&[u8; 32], &[u8; 32])) -> ([u8; 32], [u8; 32]) {
+    (hash_node(a.0, a.1), hash_node(b.0, b.1))
+}
+
+/// `hash_leaf_wide` of rows `a` and `b` of `cols`, read from the columns in
+/// place, so no row is gathered into a vector of its own first.
+#[cfg(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel"))]
+pub fn hash_leaf_wide2(cols: &[alloc::vec::Vec<Fp>], a: usize, b: usize) -> ([u8; 32], [u8; 32]) {
+    let mut k = crate::hash::keccak_wasm::Keccak2::new();
+    k.update(DOM_LEAF_WIDE, DOM_LEAF_WIDE);
+    for col in cols {
+        k.update(&col[a].value().to_le_bytes(), &col[b].value().to_le_bytes());
+    }
+    digest2(k)
+}
+
+#[cfg(not(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel")))]
+pub fn hash_leaf_wide2(cols: &[alloc::vec::Vec<Fp>], a: usize, b: usize) -> ([u8; 32], [u8; 32]) {
+    (hash_leaf_wide_at(cols, a), hash_leaf_wide_at(cols, b))
+}
+
+/// `hash_leaf_wide` of row `r` of `cols`, read from the columns in place.
+pub fn hash_leaf_wide_at(cols: &[alloc::vec::Vec<Fp>], r: usize) -> [u8; 32] {
+    let mut k = Keccak::new(512, 32, 0x01);
+    k.update(DOM_LEAF_WIDE);
+    for col in cols {
+        k.update(&col[r].value().to_le_bytes());
+    }
     digest(k)
 }
 

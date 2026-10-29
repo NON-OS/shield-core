@@ -9,7 +9,7 @@ mod top;
 mod tree;
 mod verify;
 
-pub use hash::{hash_leaf_ext, hash_leaf_group, hash_leaf_quad, hash_leaf_wide, hash_leaf_wide_periodic, PeriodicLeafHasher, DIGEST_BYTES};
+pub use hash::{hash_leaf_ext, hash_leaf_group, hash_leaf_quad, hash_leaf_wide, hash_leaf_wide2, hash_leaf_wide_at, hash_leaf_wide_periodic, PeriodicLeafHasher, DIGEST_BYTES};
 pub use top::TreeTop;
 pub use tree::MerkleTree;
 pub use verify::{verify_path, verify_path_ext, verify_path_group, verify_path_pair};

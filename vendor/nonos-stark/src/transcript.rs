@@ -241,30 +241,16 @@ impl Transcript {
         const BLOCK: u64 = 1 << 20;
         let t = pow_template(0x05, &self.state);
         /*
-         * On an arm64 core with the SHA3 instructions, nonces go two to a
-         * permutation. Pairs are searched in order and the lower of a winning
-         * pair is taken first, so the nonce found is the same smallest nonce.
+         * On an arm64 core with the SHA3 instructions, and in a threaded
+         * browser build with wasm SIMD, nonces go two to a permutation.
          */
         #[cfg(target_arch = "aarch64")]
         if crate::hash::keccak_arm::sha3_available() {
-            let mut base = 0u64;
-            loop {
-                let hit = (base / 2..(base + BLOCK) / 2)
-                    .into_par_iter()
-                    .find_first(|&k| {
-                        let (a, b) = crate::hash::keccak_arm::pow_lanes2(&t, 2 * k, 2 * k + 1);
-                        a.leading_zeros() >= bits || b.leading_zeros() >= bits
-                    });
-                if let Some(k) = hit {
-                    let (a, _) = crate::hash::keccak_arm::pow_lanes2(&t, 2 * k, 2 * k + 1);
-                    return if a.leading_zeros() >= bits {
-                        2 * k
-                    } else {
-                        2 * k + 1
-                    };
-                }
-                base += BLOCK;
-            }
+            return search_pairs(&t, bits, BLOCK, crate::hash::keccak_arm::pow_lanes2);
+        }
+        #[cfg(all(target_arch = "wasm32", target_feature = "atomics"))]
+        if crate::hash::keccak_wasm::simd_available() {
+            return search_pairs(&t, bits, BLOCK, crate::hash::keccak_wasm::pow_lanes2);
         }
         let mut base = 0u64;
         loop {
@@ -287,6 +273,34 @@ impl Transcript {
         }
         self.mix(0x05, &nonce.to_le_bytes());
         true
+    }
+}
+
+/// The smallest nonce meeting `bits`, searched two to a permutation by
+/// `lanes2`. Pairs are searched in order and the lower of a winning pair is
+/// taken first, so the nonce found is the one the one-at-a-time search finds.
+#[cfg(all(
+    feature = "parallel",
+    any(target_arch = "aarch64", all(target_arch = "wasm32", target_feature = "atomics"))
+))]
+fn search_pairs(
+    t: &[u64; 25],
+    bits: u32,
+    block: u64,
+    lanes2: fn(&[u64; 25], u64, u64) -> (u64, u64),
+) -> u64 {
+    use rayon::prelude::*;
+    let mut base = 0u64;
+    loop {
+        let hit = (base / 2..(base + block) / 2).into_par_iter().find_first(|&k| {
+            let (a, b) = lanes2(t, 2 * k, 2 * k + 1);
+            a.leading_zeros() >= bits || b.leading_zeros() >= bits
+        });
+        if let Some(k) = hit {
+            let (a, _) = lanes2(t, 2 * k, 2 * k + 1);
+            return if a.leading_zeros() >= bits { 2 * k } else { 2 * k + 1 };
+        }
+        base += block;
     }
 }
 

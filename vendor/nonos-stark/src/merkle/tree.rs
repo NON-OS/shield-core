@@ -6,7 +6,7 @@
 use super::super::field::{Fp, Fp2};
 use super::hash::{hash_leaf, hash_leaf_ext, hash_leaf_group, hash_leaf_pair, hash_leaf_wide};
 use super::super::fri::FOLD;
-use super::hash::{hash_leaf_wide_periodic, hash_node};
+use super::hash::{hash_leaf_wide_periodic, hash_node, hash_node2};
 use alloc::vec::Vec;
 
 /// A committed binary Merkle tree over field-element leaves. The leaf count is
@@ -143,8 +143,18 @@ impl MerkleTree {
             if below.len() <= 1 {
                 break;
             }
-            let next = crate::par::map_index(below.len() / 2, |i| {
-                hash_node(&below[2 * i], &below[2 * i + 1])
+            // Two nodes at a time, each from its own two children, so a build
+            // with a two-way sponge hashes both in one permutation.
+            let mut next = alloc::vec![[0u8; 32]; below.len() / 2];
+            crate::par::for_each_chunk_mut_indexed(&mut next, 2, |i, out| {
+                if let [x, y] = out {
+                    (*x, *y) = hash_node2(
+                        (&below[2 * i], &below[2 * i + 1]),
+                        (&below[2 * i + 2], &below[2 * i + 3]),
+                    );
+                } else {
+                    out[0] = hash_node(&below[2 * i], &below[2 * i + 1]);
+                }
             });
             layers.push(next);
         }

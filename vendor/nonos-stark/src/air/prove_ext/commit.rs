@@ -8,7 +8,7 @@
 //! transcript absorbs and the queries open.
 
 use super::super::super::field::Fp;
-use super::super::super::merkle::hash_leaf_wide;
+use super::super::super::merkle::{hash_leaf_wide, hash_leaf_wide2, hash_leaf_wide_at};
 use super::super::super::merkle::MerkleTree;
 use super::coset::extend;
 use super::setup::Domain;
@@ -38,9 +38,16 @@ pub(in crate::air) fn wide_streamed(coeffs: &[Vec<Fp>], d: &Domain) -> MerkleTre
     let mut digests = alloc::vec![[0u8; 32]; d.n];
     for c in 0..d.blowup {
         let cols = extend(coeffs, d, c);
-        let hashed: Vec<[u8; 32]> = crate::par::map_index(d.t, |i| {
-            let row: Vec<Fp> = cols.iter().map(|col| col[i]).collect();
-            hash_leaf_wide(&row)
+        // Rows two at a time, read from the columns in place, so a build with a
+        // two-way sponge hashes both in one permutation and no row is gathered
+        // into a vector first. Each digest is its own row's.
+        let mut hashed = alloc::vec![[0u8; 32]; d.t];
+        crate::par::for_each_chunk_mut_indexed(&mut hashed, 2, |i, out| {
+            if let [x, y] = out {
+                (*x, *y) = hash_leaf_wide2(&cols, i, i + 1);
+            } else {
+                out[0] = hash_leaf_wide_at(&cols, i);
+            }
         });
         for (i, h) in hashed.into_iter().enumerate() {
             digests[c + d.blowup * i] = h;

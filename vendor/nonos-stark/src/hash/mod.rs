@@ -7,6 +7,8 @@ mod digest;
 mod keccak;
 #[cfg(all(target_arch = "aarch64", any(feature = "parallel", test)))]
 pub(crate) mod keccak_arm;
+#[cfg(all(target_arch = "wasm32", target_feature = "atomics", feature = "parallel"))]
+pub(crate) mod keccak_wasm;
 
 pub use digest::{blake3_hash, keccak256};
 pub(crate) use keccak::{pow_lane, pow_template, Keccak};
