@@ -42,8 +42,11 @@ pub fn prove_spend(
         let entropy = SpendEntropy::draw()?;
         let attempt = match cache {
             Some(top) => {
-                let opts =
-                    Options { cache: Some(top), progress: None, cancel: Some(cancel.flag()) };
+                let opts = Options {
+                    cache: Some(top),
+                    progress: cancel.progress(),
+                    cancel: Some(cancel.flag()),
+                };
                 nox_prover::prove_with(&json, &seed, entropy.consume()?, &opts)
                     .map(|(p, _)| (p, None))
             }

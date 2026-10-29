@@ -17,6 +17,10 @@ let memory = null;
 let cache = null;
 let requests = null;
 
+// The prover names each phase as it finishes, from inside the call that holds this thread. Posting
+// is not held up by that call, so the page sees the proof move while it runs.
+self.shieldPhase = (phase, done) => postMessage({ phase, done });
+
 const unhex = (h) => Uint8Array.from(h.match(/../g) ?? [], (b) => parseInt(b, 16));
 
 async function persist() {
@@ -50,7 +54,7 @@ async function time() {
     ["request.json", "seed.json", "entropy.hex"].map(text),
   );
   const start = performance.now();
-  const proved = core.prove_with_cache(request, seed, unhex(entropy.trim()), cache);
+  const proved = core.prove_reporting(request, seed, unhex(entropy.trim()), cache);
   const seconds = (performance.now() - start) / 1000;
   const { point, proof, proof_bytes: proofBytes } = JSON.parse(proved);
   // The public words pass 2^53, so they are kept as the prover wrote them.

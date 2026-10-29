@@ -10,6 +10,7 @@ import { inFlight } from "../state/in-flight.js";
 import { zip } from "../files/zip.js";
 import { save } from "../files/save.js";
 import { steps } from "./landing-steps.js";
+import { settleProgress } from "../ui/settle-progress.js";
 
 async function share(files) {
   const read = await Promise.all(
@@ -36,15 +37,26 @@ export function ticket(p) {
   const status = p.settled ? (p.status ?? "pending") : null;
   if (p.settled && status === "pending" && !p.polling) {
     p.polling = true;
-    untilMined(app, "sepolia", p.settled.hash, async (s) => {
-      if (s === "pending") return;
-      if (s === "confirmed") {
-        await inFlight.clear(app);
-        app.spend = null;
-      }
-      if (app.screen === "spend" && app.params.settled?.hash === p.settled.hash)
-        app.show("spend", { ...p, status: s });
-    });
+    p.watch = { sentAt: p.settled.at ?? Date.now(), checks: 0, lastCheck: null };
+    const counted = (seconds) => {
+      p.watch.checks += 1;
+      p.watch.lastCheck = seconds;
+    };
+    untilMined(
+      app,
+      "sepolia",
+      p.settled.hash,
+      async (s) => {
+        if (s === "pending") return;
+        if (s === "confirmed") {
+          await inFlight.clear(app);
+          app.spend = null;
+        }
+        if (app.screen === "spend" && app.params.settled?.hash === p.settled.hash)
+          app.show("spend", { ...p, status: s });
+      },
+      counted,
+    );
   }
   const review = () =>
     app.run(async () => {
@@ -53,7 +65,7 @@ export function ticket(p) {
   const settle = () =>
     app.run(async () => {
       await confirmed(app);
-      const sent = await app.call("confirmPublicSend", p.review.id);
+      const sent = { ...(await app.call("confirmPublicSend", p.review.id)), at: Date.now() };
       await inFlight.set(app, { withdraw: p.withdraw, ticket: t, settled: sent });
       app.show("spend", { ...p, review: null, settled: sent });
     });
@@ -93,6 +105,7 @@ export function ticket(p) {
           ["from", `Account ${(active?.index ?? 0) + 1}`],
           ["network fee, at most", `${r.maxNetworkFee} ETH`],
         ]),
+      status === "pending" && p.watch && settleProgress(p.watch),
       p.settled && [
         h("p", { class: "label" }, "Settlement"),
         valueBlock(p.settled.hash),

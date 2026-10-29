@@ -15,6 +15,7 @@ import { watchIdle } from "./state/idle.js";
 import { watchScan } from "./state/scan.js";
 import { Tunnel } from "./route/tunnel.js";
 import { bridge } from "./route/bridge.js";
+import { loadPace, mark } from "./state/proof-progress.js";
 
 const root = document.querySelector("main");
 
@@ -53,6 +54,8 @@ async function boot() {
     new URL("./wallet/worker.js", import.meta.url),
     bridge(app.tunnel, redraw),
   );
+  app.wallet.onPhase = mark;
+  await loadPace(app.store, app.proving.measured);
   const stored = await app.wallet.start({
     threads: app.proving.threads,
     cache: cache ?? new Uint8Array(),

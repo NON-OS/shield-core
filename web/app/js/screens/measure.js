@@ -7,6 +7,8 @@ import { proving } from "../device/proving.js";
 import { zip } from "../files/zip.js";
 import { save } from "../files/save.js";
 import { card } from "../text/card.js";
+import { proofProgress } from "../ui/proof-progress.js";
+import { begin, finish, loadPace } from "../state/proof-progress.js";
 
 const unhex = (s) =>
   Uint8Array.from(s.replace(/^0x/, "").match(/../g) ?? [], (b) => parseInt(b, 16));
@@ -42,14 +44,17 @@ export function measure() {
   const run = () =>
     app.run(async () => {
       await proving.started(app.store);
+      begin();
       app.show("measure", { running: true, from });
       const result = await app.wallet.time();
+      await finish(app.store);
       await proving.finished(app.store, {
         seconds: result.seconds,
         wasmBytes: result.wasmBytes,
         at: Date.now(),
       });
       app.proving = await proving(app.store);
+      await loadPace(app.store, app.proving.measured);
       app.show("measure", { result, from });
     });
   const threads = app.proving?.threads || 1;
@@ -74,7 +79,7 @@ export function measure() {
         { class: "lead" },
         `On this device, using ${threads === 1 ? "one thread" : `${threads} threads`}. Nothing has been sent. If the page reloads instead of finishing, this device cannot hold a proof.`,
       ),
-      h("div", { class: "progress", "aria-hidden": "true" }, h("span")),
+      proofProgress().meter,
     ],
     r && [
       h("p", { class: "statement", role: "status" }, "A real transfer, proved on this device."),

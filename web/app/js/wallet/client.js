@@ -11,6 +11,8 @@ export class Wallet {
   #url;
   #options;
   #route;
+  /** Called with each phase a running proof finishes. */
+  onPhase = null;
 
   constructor(url, route) {
     this.#url = url;
@@ -20,6 +22,7 @@ export class Wallet {
   #spawn() {
     this.#worker = new Worker(this.#url, { type: "module" });
     this.#worker.onmessage = ({ data }) => {
+      if ("phase" in data) return this.onPhase?.(data.phase);
       const p = this.#waiting.get(data.id);
       if (!p) return;
       this.#waiting.delete(data.id);

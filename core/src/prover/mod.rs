@@ -8,5 +8,5 @@ mod cancel;
 mod hasher;
 pub mod launch;
 
-pub use cancel::Cancel;
+pub use cancel::{Cancel, Progress};
 pub use hasher::pool_hasher;

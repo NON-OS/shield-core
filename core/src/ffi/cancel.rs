@@ -32,6 +32,12 @@ impl CancelToken {
 }
 
 impl CancelToken {
+    /// A fresh token whose proof reports each phase it finishes, for a shell that calls the core
+    /// from Rust rather than through the generated bindings.
+    pub fn with_progress(progress: crate::prover::Progress) -> std::sync::Arc<CancelToken> {
+        std::sync::Arc::new(CancelToken { inner: Cancel::with_progress(progress) })
+    }
+
     pub(super) fn token(&self) -> &Cancel {
         &self.inner
     }

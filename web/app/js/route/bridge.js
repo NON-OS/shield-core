@@ -7,6 +7,7 @@ import { slot } from "./slot.js";
 import { consent } from "./consent.js";
 import { route } from "../state/route.js";
 import { patience } from "./patience.js";
+import { metered } from "../state/net-meter.js";
 
 const TRIES = 3;
 // The time all tries of one request may take together, and never less than room for two.
@@ -30,11 +31,14 @@ export function bridge(tunnel, redraw) {
       try {
         for (let i = 0; i < tries && Date.now() - started < budget(body); i++) {
           route.activity = { host, bytes, since: Date.now(), attempt: i + 1, tries };
+          const ended = metered();
           try {
             const reply = await tunnel.fetch({ method, url, headers, body });
+            ended(true);
             redraw();
             return { kind: slot.REPLY, status: reply.status, bytes: reply.bytes };
           } catch {
+            ended(false);
             tunnel.reset();
             redraw();
             if (!route.nym) return { kind: slot.DIRECT };

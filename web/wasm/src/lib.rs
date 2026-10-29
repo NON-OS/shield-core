@@ -14,6 +14,7 @@ mod json;
 mod panic_report;
 mod periodic_cache;
 mod periodic_root;
+mod progress;
 mod views;
 mod wallet;
 
@@ -22,4 +23,5 @@ pub use endpoints::endpoint_hosts;
 pub use panic_report::report_panics;
 pub use periodic_cache::periodic_cache;
 pub use periodic_root::periodic_root;
+pub use progress::prove_reporting;
 pub use wallet::{changed_files, load_file, read_file, WebWallet};
