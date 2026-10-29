@@ -56,14 +56,18 @@ export function settings() {
             app.show("locked");
           }),
       ],
-      [`Lock when idle: ${idle}`, () => watchIdle.cycle()],
-      [`Nym mixnet: ${route.nym ? "on" : "off"}`, switchRoute],
+      { label: "Lock when idle", value: idle, action: () => watchIdle.cycle() },
+      { label: "Nym mixnet", value: route.nym ? "on" : "off", action: switchRoute },
       !installed && app.install && ["Add to the home screen", () => app.install()],
       !installed && !app.install && ["Add to the home screen", () => app.show("install")],
       ["What the web version trusts", () => app.show("warning", { back: "settings" })],
       ["Check this release", () => app.show("release")],
       ["Licences", () => app.show("licences")],
-      ["Destroy this wallet", () => app.show("wipe", { back: "settings" })],
+      {
+        label: "Destroy this wallet",
+        danger: true,
+        action: () => app.show("wipe", { back: "settings" }),
+      },
     ]),
     credits(),
   );

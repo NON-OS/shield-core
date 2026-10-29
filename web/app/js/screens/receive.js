@@ -22,7 +22,10 @@ export function receive() {
       backdrop: "receive",
       back: () => app.show("shield"),
       footer: [
-        button("Copy address", () => copyThenClear(address), { busy: "Copied" }),
+        button("Copy address", () => copyThenClear(address), {
+          busy: "Copied",
+          disabled: !address,
+        }),
         button("Receive at the 0x address", () => app.show("accountReceive"), { kind: "outline" }),
       ],
     },
@@ -31,6 +34,7 @@ export function receive() {
       { class: "lead" },
       "Give this to the sender. It says nothing about the balance or the notes held.",
     ),
+    !address && h("p", { class: "caption", role: "status" }, "Working out the address."),
     address && qr(address, "QR code of the wallet address"),
     address && valueBlock(address),
     facts([

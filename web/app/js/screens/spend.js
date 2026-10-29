@@ -2,6 +2,7 @@ import { h } from "../ui/h.js";
 import { frame } from "../ui/frame.js";
 import { button } from "../ui/button.js";
 import { field } from "../ui/field.js";
+import { amountField } from "../ui/amount-field.js";
 import { networkBanner } from "../ui/network-banner.js";
 import { app } from "../state/app.js";
 import { cannotProve } from "../text/cannot-prove.js";
@@ -9,11 +10,6 @@ import { proving } from "./spend-proving.js";
 import { early } from "./spend-early.js";
 import { ticket } from "./spend-ticket.js";
 import { notes } from "./spend-notes.js";
-
-const sizes = {
-  eth: "Amount in ETH: 0.01, 0.02, 0.05, 0.1 and so on",
-  nox: "Amount in NOX: 1,000, 2,000, 5,000, 10,000 and so on",
-};
 
 function refused(why) {
   return {
@@ -40,7 +36,7 @@ function form(p) {
     app.show("spend", { ...p, coin: coin.value, entered: true }),
   );
   const to = field(withdraw ? "To EVM address" : "To wallet address", { value: p.to ?? "" });
-  const amount = field(sizes[coin.value], { inputmode: "decimal", value: p.amount ?? "" });
+  const amount = amountField(coin.value, { value: p.amount ?? "" });
   const note = h("div", { class: "content-notes" });
   const update = () => notes(p, to.input.value.trim(), note);
   to.input.addEventListener("input", update);

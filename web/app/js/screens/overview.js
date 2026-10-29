@@ -36,6 +36,21 @@ const gear = () =>
     ],
   ]);
 
+const caret = () =>
+  svg(12, 12, [
+    [
+      "path",
+      {
+        d: "M2.5 4.5 6 8l3.5-3.5",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "1.6",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+      },
+    ],
+  ]);
+
 export function overview() {
   const held = app.public?.network === app.network ? app.public : null;
   const account = app.accounts?.find((a) => a.active);
@@ -54,7 +69,9 @@ export function overview() {
     app.draw();
     read();
   });
-  const note = held ? "Read from a public endpoint" : "Not read yet";
+  // While the balances are read, each row holds a quiet bar where its amount will be.
+  const amount = (coin) =>
+    held ? held[coin] : h("span", { class: "pending-amount", "aria-label": "not read yet" });
   return frame(
     { number: "03", title: "Wallet", backdrop: "home" },
     h(
@@ -85,14 +102,24 @@ export function overview() {
         address && avatar(address),
         `Account ${(account?.index ?? 0) + 1}  ${short(address)}`,
       ),
-      h("label", { class: "pill" }, choose),
+      h(
+        "label",
+        { class: "pill" },
+        choose,
+        h("span", { class: "caret", "aria-hidden": "true" }, caret()),
+      ),
     ),
     h(
       "section",
       { class: "tile", "aria-label": "Public balances" },
-      coinRow("eth", held ? held.eth : "·", note),
-      coinRow("nox", held ? held.nox : "·"),
-      coinRow("usdc", held ? held.usdc : "·"),
+      coinRow("eth", amount("eth")),
+      coinRow("nox", amount("nox")),
+      coinRow("usdc", amount("usdc")),
+    ),
+    h(
+      "p",
+      { class: "caption" },
+      held ? "Public balances, as a public endpoint reports them." : "Reading the public balances.",
     ),
     h(
       "nav",

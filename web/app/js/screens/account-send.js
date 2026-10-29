@@ -42,6 +42,22 @@ function form(p) {
     app.run(async () => {
       amount.input.value = await app.call("publicMax", app.network, coin.value);
     });
+  // Max sits inside the amount field, where the amount it fills in goes.
+  const box = h("div", { class: "affix" });
+  amount.input.before(box);
+  box.append(
+    amount.input,
+    h(
+      "button",
+      {
+        type: "button",
+        class: "suffix",
+        onclick: max,
+        "aria-label": "The most this account can send",
+      },
+      "Max",
+    ),
+  );
   return {
     body: [
       h("div", { class: "field" }, h("label", { for: "coin" }, "Coin"), coin),
@@ -53,7 +69,6 @@ function form(p) {
           { class: "lead" },
           `This account holds ${held} ${units[coin.value]} on ${chain(app.network)}.`,
         ),
-      h("button", { type: "button", class: "quiet", onclick: max }, "Max"),
     ],
     footer: [button("Review", review, { busy: "Working it out" })],
   };

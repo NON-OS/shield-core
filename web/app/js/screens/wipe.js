@@ -21,7 +21,7 @@ export function wipe() {
       back: () => app.show(back),
       footer: [
         button("Keep this wallet", () => app.show(back)),
-        button("Destroy it", destroy, { kind: "outline", busy: "Destroying" }),
+        button("Destroy it", destroy, { kind: "danger", busy: "Destroying" }),
       ],
     },
     h(

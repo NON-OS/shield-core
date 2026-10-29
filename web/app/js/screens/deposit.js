@@ -2,6 +2,7 @@ import { h } from "../ui/h.js";
 import { frame } from "../ui/frame.js";
 import { button } from "../ui/button.js";
 import { field } from "../ui/field.js";
+import { amountField } from "../ui/amount-field.js";
 import { facts } from "../ui/facts.js";
 import { quiet } from "../ui/quiet.js";
 import { valueBlock } from "../ui/value-block.js";
@@ -12,11 +13,6 @@ import { confirmed } from "../device/confirmed.js";
 import { untilMined } from "../state/poll.js";
 import { short } from "../text/short.js";
 import { depositTicket } from "./deposit-ticket.js";
-
-const sizes = {
-  eth: "Amount in ETH: 0.01, 0.02, 0.05 and so on",
-  nox: "Amount in NOX: 1,000, 2,000, 5,000 and so on",
-};
 
 const picker = (p, screen = "deposit") => {
   const coin = h(
@@ -39,7 +35,7 @@ const active = () => {
 
 function form(p) {
   const { coin, el } = picker(p);
-  const amount = field(sizes[coin.value], { inputmode: "decimal" });
+  const amount = amountField(coin.value, { value: p.amount ?? "" });
   const review = () =>
     app.run(async () => {
       const r = await app.call("reviewShield", coin.value, amount.input.value.trim());
@@ -70,7 +66,7 @@ function external(p) {
   const from = field("From EVM address", {
     value: p.from ?? app.accounts?.find((x) => x.active)?.publicAddress ?? "",
   });
-  const amount = field(`Amount in ${coin.value.toUpperCase()}`, { inputmode: "decimal" });
+  const amount = amountField(coin.value);
   const check = () =>
     app.run(async () => {
       const t = await app.call(

@@ -145,14 +145,53 @@
 }
 
 .quiet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 16px;
+  align-items: center;
+  gap: 12px;
   background: none;
   border: 0;
   color: var(--paper);
   font: 400 17.5px/1.35 var(--mono);
   text-align: left;
   padding: 14px 16px;
-  min-height: 48px;
+  min-height: 52px;
   cursor: pointer;
+}
+
+.quiet .label-text {
+  overflow-wrap: anywhere;
+}
+
+/* A setting keeps its name on one line and lets its value wrap beside it. */
+.quiet:has(.value) {
+  grid-template-columns: auto minmax(0, 1fr) 16px;
+}
+
+.quiet:has(.value) .label-text {
+  white-space: nowrap;
+}
+
+.quiet .value {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 15px;
+  text-align: right;
+}
+
+.quiet .go {
+  grid-column: 3;
+  display: flex;
+  color: var(--muted);
+}
+
+.quiet:hover .go,
+.quiet:focus-visible .go {
+  color: var(--cyan);
+}
+
+.quiet.danger {
+  color: var(--bad);
 }
 
 .quiet + .quiet {
@@ -406,7 +445,21 @@
 .pills {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.pills .pill:first-child {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill .caret {
+  display: flex;
+  margin-left: -4px;
+  color: var(--muted);
 }
 
 .pill {
@@ -419,7 +472,7 @@
   border: 0;
   background: var(--raised);
   color: var(--paper);
-  font: 500 17.5px var(--prose);
+  font: 500 15px var(--prose);
   cursor: pointer;
 }
 
@@ -875,4 +928,91 @@
   .screen:has(.proof-progress) .backdrop {
     display: none;
   }
+}
+
+/* The first standard sizes of a coin, picked with a tap; the field still takes any typed. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.chip {
+  min-height: 40px;
+  padding: 0 14px;
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--edge);
+  color: var(--paper);
+  font: 400 15px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--muted);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  color: var(--ink);
+}
+
+/* An input with an action at its end, such as Max inside an amount. */
+.affix {
+  position: relative;
+}
+
+.affix input {
+  width: 100%;
+  padding-right: 76px;
+}
+
+.affix .suffix {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  min-height: 36px;
+  padding: 0 12px;
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--edge);
+  color: var(--cyan);
+  font: 400 15px/1 var(--mono);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* Where an amount will be once it is read. */
+.pending-amount {
+  display: inline-block;
+  width: 56px;
+  height: 14px;
+  border-radius: var(--edge);
+  background: var(--raised);
+}
+
+.caption {
+  margin: -12px 0 0;
+  font: 400 13.75px/1.4 var(--mono);
+  color: var(--muted);
+}
+
+/* A screen that asks for something, or shows an address to scan, keeps its band short on a phone
+   so the fields and the code are in view without scrolling. */
+@media (max-width: 600px), (max-height: 900px) {
+  .screen:has(.field, .qr) .backdrop {
+    aspect-ratio: 1290 / 480;
+  }
+}
+
+/* An action that destroys: outlined, in the colour the app keeps for loss. */
+.action.danger {
+  background: none;
+  border: 1px solid var(--bad);
+  color: var(--bad);
 }
